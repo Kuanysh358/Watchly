@@ -1,0 +1,7 @@
+@model Watchly.Web.Models.ViewModels.ErrorViewModel
+@{ ViewData["Title"] = "Ошибка"; }
+<h2>Произошла ошибка.</h2>
+@if (Model?.ShowRequestId == true)
+{
+    <p><strong>Request ID:</strong> <code>@Model.RequestId</code></p>
+}

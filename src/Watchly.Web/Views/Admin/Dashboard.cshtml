@@ -1,0 +1,136 @@
+@model Watchly.Web.Models.ViewModels.MovieListViewModel
+@{ ViewData["Title"] = "Админ-панель"; }
+
+<div class="admin-shell">
+    <div class="admin-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h2 class="mb-1">Панель администратора</h2>
+            <p class="admin-subtitle mb-0">Управление каталогом в неоновом стиле</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn-primary" asp-action="Create">➕ Ручное добавление фильма</a>
+            <button id="autoImportButton" type="button" class="btn-secondary">🎬 Автоматический импорт TMDB</button>
+        </div>
+    </div>
+
+    @Html.AntiForgeryToken()
+
+    <div id="autoImportStatus" class="alert alert-success mt-3" style="display:none;"></div>
+
+    <div id="autoImportMovies" class="auto-import-grid mt-3"></div>
+
+    <table class="table mt-4">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Название</th>
+                <th>Год</th>
+                <th>Рейтинг</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var movie in Model.Movies)
+            {
+                <tr>
+                    <td>@movie.Id</td>
+                    <td>@movie.Title</td>
+                    <td>@movie.ReleaseYear</td>
+                    <td>@movie.Rating</td>
+                    <td>
+                        <a class="btn-secondary" asp-action="Edit" asp-route-id="@movie.Id">Изменить</a>
+                        <form asp-action="Delete" method="post" style="display:inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@movie.Id" />
+                            <button class="btn-danger" type="submit">Удалить</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        const autoImportUrl = '@Url.Action("AutoImportTmdb", "Admin")';
+        const statusBox = document.getElementById('autoImportStatus');
+        const moviesBox = document.getElementById('autoImportMovies');
+        const autoImportBtn = document.getElementById('autoImportButton');
+        const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        const importedPoolKey = 'watchly_admin_tmdb_imported_pool';
+
+        function getImportedPool() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(importedPoolKey) || '[]');
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function setImportedPool(ids) {
+            localStorage.setItem(importedPoolKey, JSON.stringify(ids));
+        }
+
+        function renderImportedMovies(movies) {
+            if (!movies || movies.length === 0) {
+                moviesBox.innerHTML = '';
+                return;
+            }
+
+            moviesBox.innerHTML = movies.map(movie => `
+                <article class="auto-import-card">
+                    <h6>${movie.title || 'Без названия'}</h6>
+                    <p>${movie.releaseYear || '—'} • ⭐ ${Number(movie.rating || 0).toFixed(1)}</p>
+                    ${movie.trailerUrl ? `<a href="${movie.trailerUrl}" target="_blank" rel="noopener">Открыть трейлер</a>` : '<span>Трейлер не найден</span>'}
+                </article>
+            `).join('');
+        }
+
+        autoImportBtn.addEventListener('click', async function () {
+            autoImportBtn.disabled = true;
+            statusBox.style.display = 'none';
+
+            const excludedTmdbIds = getImportedPool();
+
+            try {
+                const response = await fetch(autoImportUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': antiForgeryToken
+                    },
+                    body: JSON.stringify({ excludedTmdbIds, batchSize: 5 })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Ошибка ответа сервера');
+                }
+
+                const data = await response.json();
+                const updatedPool = [...excludedTmdbIds, ...(data.importedTmdbIds || [])];
+                setImportedPool(updatedPool);
+
+                statusBox.innerText = data.message || 'Импорт завершен';
+                statusBox.classList.remove('alert-error');
+                statusBox.classList.add('alert-success');
+                statusBox.style.display = 'block';
+
+                renderImportedMovies(data.movies || []);
+
+                if ((data.importedCount || 0) > 0) {
+                    setTimeout(() => window.location.reload(), 900);
+                }
+            } catch (error) {
+                statusBox.innerText = 'Не удалось выполнить авто-импорт TMDB.';
+                statusBox.classList.remove('alert-success');
+                statusBox.classList.add('alert-error');
+                statusBox.style.display = 'block';
+            } finally {
+                autoImportBtn.disabled = false;
+            }
+        });
+    </script>
+}

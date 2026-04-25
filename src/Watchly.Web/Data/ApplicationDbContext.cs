@@ -1,0 +1,97 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Watchly.Web.Models.DataModels;
+
+namespace Watchly.Web.Data
+{
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    {
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Movie> Movies => Set<Movie>();
+        public DbSet<Genre> Genres => Set<Genre>();
+        public DbSet<MovieGenre> MovieGenres => Set<MovieGenre>();
+        public DbSet<Watchlist> Watchlists => Set<Watchlist>();
+        public DbSet<ViewHistory> ViewHistories => Set<ViewHistory>();
+
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            // Movie
+            builder.Entity<Movie>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Rating).HasColumnType("decimal(3,1)");
+            });
+
+            // Genre
+            builder.Entity<Genre>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            });
+
+            // MovieGenre (Many-to-Many)
+            builder.Entity<MovieGenre>(entity =>
+            {
+                entity.HasKey(e => new { e.MovieId, e.GenreId });
+                entity.HasOne(e => e.Movie)
+                    .WithMany(m => m.MovieGenres)
+                    .HasForeignKey(e => e.MovieId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Genre)
+                    .WithMany(g => g.MovieGenres)
+                    .HasForeignKey(e => e.GenreId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Watchlist
+            builder.Entity<Watchlist>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.Watchlists)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Movie)
+                    .WithMany(m => m.Watchlists)
+                    .HasForeignKey(e => e.MovieId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(e => new { e.UserId, e.MovieId }).IsUnique();
+            });
+
+            // ViewHistory
+            builder.Entity<ViewHistory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.ViewHistories)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Movie)
+                    .WithMany(m => m.ViewHistories)
+                    .HasForeignKey(e => e.MovieId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Seed Genres
+            builder.Entity<Genre>().HasData(
+                new Genre { Id = 1, Name = "Боевик" },
+                new Genre { Id = 2, Name = "Комедия" },
+                new Genre { Id = 3, Name = "Драма" },
+                new Genre { Id = 4, Name = "Ужасы" },
+                new Genre { Id = 5, Name = "Фантастика" },
+                new Genre { Id = 6, Name = "Триллер" },
+                new Genre { Id = 7, Name = "Романтика" },
+                new Genre { Id = 8, Name = "Анимация" },
+                new Genre { Id = 9, Name = "Документальный" },
+                new Genre { Id = 10, Name = "Мюзикл" }
+            );
+        }
+    }
+}

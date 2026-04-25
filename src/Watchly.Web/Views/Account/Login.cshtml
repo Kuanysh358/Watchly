@@ -1,0 +1,14 @@
+@model Watchly.Web.Models.ViewModels.LoginViewModel
+@{ ViewData["Title"] = "Вход"; }
+<div class="form-card">
+    <h2>Вход</h2>
+    <form asp-action="Login" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <label asp-for="EmailOrUsername"></label><input asp-for="EmailOrUsername" /><span asp-validation-for="EmailOrUsername" class="text-danger"></span>
+        <label asp-for="Password"></label><input asp-for="Password" /><span asp-validation-for="Password" class="text-danger"></span>
+        <div class="checkbox-row"><input asp-for="RememberMe" /><label asp-for="RememberMe"></label></div>
+        <button type="submit" class="btn-primary">Войти</button>
+    </form>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

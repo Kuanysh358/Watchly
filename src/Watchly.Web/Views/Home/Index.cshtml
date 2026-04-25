@@ -1,0 +1,14 @@
+@{
+    ViewData["Title"] = "Главная";
+}
+<section class="hero">
+    <h1>Watchly</h1>
+    <p>Открывайте фильмы, сохраняйте в избранное и отслеживайте историю просмотров.</p>
+    <div class="hero-actions">
+        <a class="btn-primary" asp-controller="Cinema" asp-action="Index">Перейти в каталог</a>
+        @if (User.Identity?.IsAuthenticated != true)
+        {
+            <a class="btn-secondary" asp-controller="Account" asp-action="Register">Создать аккаунт</a>
+        }
+    </div>
+</section>

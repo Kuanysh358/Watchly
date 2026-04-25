@@ -1,0 +1,273 @@
+@model Watchly.Web.Models.ViewModels.MovieCreateEditViewModel
+
+@{
+    ViewData["Title"] = Model.Id.HasValue ? "Редактирование" : "Ручное добавление";
+}
+
+<div class="admin-shell py-3">
+    <div class="admin-form-card">
+        <h1 class="text-light mb-3"><i class="fas fa-film"></i> @ViewData["Title"] фильма</h1>
+        <p class="admin-subtitle mb-4">Введите название</p>
+
+        <form method="post" asp-action="@(Model.Id.HasValue ? "Edit" : "Create")">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="alert alert-error" role="alert"></div>
+
+            @if (Model.Id.HasValue)
+            {
+                <input asp-for="Id" type="hidden" />
+            }
+
+            <div class="mb-3 position-relative">
+                <label asp-for="Title" class="form-label admin-label"></label>
+                <input asp-for="Title" class="form-control bg-secondary text-light" placeholder="Начните вводить название фильма" autocomplete="off" />
+                <span asp-validation-for="Title" class="invalid-feedback"></span>
+                <div id="tmdbSuggestions" class="tmdb-suggestions" style="display:none;"></div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label admin-label"></label>
+                <textarea asp-for="Description" class="form-control bg-secondary text-light" rows="4" placeholder="Описание"></textarea>
+                <span asp-validation-for="Description" class="invalid-feedback"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="ReleaseYear" class="form-label admin-label"></label>
+                    <input asp-for="ReleaseYear" class="form-control bg-secondary text-light" type="number" min="1900" max="2100" />
+                    <span asp-validation-for="ReleaseYear" class="invalid-feedback"></span>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Rating" class="form-label admin-label"></label>
+                    <input asp-for="Rating" class="form-control bg-secondary text-light" type="number" min="0" max="10" step="0.1" />
+                    <span asp-validation-for="Rating" class="invalid-feedback"></span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PosterUrl" class="form-label admin-label"></label>
+                    <input asp-for="PosterUrl" class="form-control bg-secondary text-light" placeholder="https://..." />
+                    <span asp-validation-for="PosterUrl" class="invalid-feedback"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="TrailerUrl" class="form-label admin-label"></label>
+                    <input asp-for="TrailerUrl" class="form-control bg-secondary text-light" placeholder="https://youtube.com/embed/..." />
+                    <span asp-validation-for="TrailerUrl" class="invalid-feedback"></span>
+                </div>
+            </div>
+
+            <div class="admin-trailer-cinema mb-4" id="trailerPreviewWrap" style="display:none;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong>🎥 Трейлер (онлайн-плеер)</strong>
+                    <button type="button" id="trailerFullscreenButton" class="btn-secondary">Полный экран</button>
+                </div>
+                <div class="trailer-player-wrap cinema-mode" id="trailerContainer">
+                    <iframe id="trailerPreview" class="trailer-player" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="DurationMinutes" class="form-label admin-label"></label>
+                    <input asp-for="DurationMinutes" class="form-control bg-secondary text-light" type="number" min="1" max="1000" />
+                    <span asp-validation-for="DurationMinutes" class="invalid-feedback"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Country" class="form-label admin-label"></label>
+                    <input asp-for="Country" class="form-control bg-secondary text-light" />
+                    <span asp-validation-for="Country" class="invalid-feedback"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Director" class="form-label admin-label"></label>
+                    <input asp-for="Director" class="form-control bg-secondary text-light" />
+                    <span asp-validation-for="Director" class="invalid-feedback"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="TmdbId" class="form-label admin-label"></label>
+                <input asp-for="TmdbId" class="form-control bg-secondary text-light" type="number" placeholder="ID из TMDB" />
+                <span asp-validation-for="TmdbId" class="invalid-feedback"></span>
+            </div>
+
+            <fieldset class="mb-4">
+                <legend class="text-light fs-6 mb-2">Жанры</legend>
+                <div class="form-control bg-secondary text-light admin-genres-box">
+                    @foreach (var genre in Model.AvailableGenres)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="genre_@genre.Id"
+                                   name="SelectedGenreIds" value="@genre.Id"
+                                   checked="@Model.SelectedGenreIds.Contains(genre.Id)" />
+                            <label class="form-check-label text-light" for="genre_@genre.Id">@genre.Name</label>
+                        </div>
+                    }
+                </div>
+            </fieldset>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Сохранить</button>
+                <a href="@Url.Action("Dashboard", "Admin")" class="btn-secondary">Отменить</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const tmdbSearchUrl = '@Url.Action("SearchTmdb", "Admin")';
+        const tmdbMovieUrl = '@Url.Action("GetTmdbMovie", "Admin")';
+        let titleSearchTimer = null;
+
+        function escapeHtml(text) {
+            return String(text || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function toEmbedUrl(rawUrl) {
+            if (!rawUrl) return '';
+            if (rawUrl.includes('youtube.com/embed/')) return rawUrl;
+            try {
+                const url = new URL(rawUrl);
+                if (url.hostname.includes('youtube.com') && url.searchParams.get('v')) {
+                    return `https://www.youtube.com/embed/${url.searchParams.get('v')}`;
+                }
+                if (url.hostname.includes('youtu.be')) {
+                    return `https://www.youtube.com/embed/${url.pathname.replace('/', '')}`;
+                }
+            } catch {}
+            return rawUrl;
+        }
+
+        function updateTrailerPreview(url) {
+            const embedUrl = toEmbedUrl(url);
+            if (!embedUrl) {
+                $('#trailerPreviewWrap').hide();
+                $('#trailerPreview').attr('src', '');
+                return;
+            }
+            $('#trailerPreview').attr('src', embedUrl);
+            $('#trailerPreviewWrap').show();
+        }
+
+        function renderTitleSuggestions(data) {
+            const suggestions = $('#tmdbSuggestions');
+            suggestions.empty();
+
+            if (!data || data.length === 0) {
+                suggestions.hide();
+                return;
+            }
+
+            data.slice(0, 8).forEach(movie => {
+                const releaseYear = movie.releaseYear || 'N/A';
+                const rating = movie.voteAverage ? Number(movie.voteAverage).toFixed(1) : 'N/A';
+                suggestions.append(`
+                    <button type="button" class="tmdb-suggestion-item"
+                            data-id="${movie.id}" data-title="${encodeURIComponent(movie.title || '')}">
+                        <strong>${escapeHtml(movie.title)}</strong>
+                        <span>${releaseYear} • ⭐ ${rating}</span>
+                    </button>
+                `);
+            });
+
+            suggestions.show();
+        }
+
+        function fillMovieForm(data) {
+            $('#Title').val(data.title || '');
+            $('#Description').val(data.overview || '');
+            $('#ReleaseYear').val(data.releaseYear || '');
+            $('#Rating').val(data.voteAverage ? Number(data.voteAverage).toFixed(1) : '');
+            $('#DurationMinutes').val(data.runtime || '');
+            $('#TmdbId').val(data.id || '');
+            $('#Country').val(data.country || '');
+            $('#Director').val(data.director || '');
+
+            if (data.posterPath) {
+                $('#PosterUrl').val('https://image.tmdb.org/t/p/w500' + data.posterPath);
+            }
+
+            if (data.trailerUrl) {
+                $('#TrailerUrl').val(data.trailerUrl);
+                updateTrailerPreview(data.trailerUrl);
+            } else {
+                updateTrailerPreview('');
+            }
+
+            if (data.genres && data.genres.length) {
+                const normalizedGenres = data.genres.map(g => String(g || '').toLowerCase());
+                $('input[name="SelectedGenreIds"]').each(function () {
+                    const labelText = $(`label[for="${this.id}"]`).text().trim().toLowerCase();
+                    this.checked = normalizedGenres.includes(labelText);
+                });
+            }
+        }
+
+        function loadTmdbMovie(tmdbId, title) {
+            $.ajax({
+                url: tmdbMovieUrl,
+                data: { tmdbId: tmdbId },
+                success: function (data) {
+                    fillMovieForm(data);
+                    $('#Title').val(title || data.title || '');
+                    $('#tmdbSuggestions').hide().empty();
+                },
+                error: function () {
+                    alert('Ошибка при загрузке данных из TMDB.');
+                }
+            });
+        }
+
+        $('#Title').on('input', function () {
+            const query = $(this).val();
+            clearTimeout(titleSearchTimer);
+
+            if (!query || query.length < 2) {
+                $('#tmdbSuggestions').hide().empty();
+                return;
+            }
+
+            titleSearchTimer = setTimeout(function () {
+                $.get(tmdbSearchUrl, { query: query })
+                    .done(renderTitleSuggestions)
+                    .fail(function () {
+                        $('#tmdbSuggestions').hide().empty();
+                    });
+            }, 250);
+        });
+
+        $(document).on('click', '.tmdb-suggestion-item', function () {
+            const id = Number($(this).data('id'));
+            const title = decodeURIComponent(String($(this).data('title') || ''));
+            loadTmdbMovie(id, title);
+        });
+
+        $('#TrailerUrl').on('input', function () {
+            updateTrailerPreview($(this).val());
+        });
+
+        $('#trailerFullscreenButton').on('click', function () {
+            const el = document.getElementById('trailerContainer');
+            if (el.requestFullscreen) {
+                el.requestFullscreen();
+            }
+        });
+
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('#tmdbSuggestions, #Title').length) {
+                $('#tmdbSuggestions').hide();
+            }
+        });
+
+        updateTrailerPreview($('#TrailerUrl').val());
+    </script>
+}

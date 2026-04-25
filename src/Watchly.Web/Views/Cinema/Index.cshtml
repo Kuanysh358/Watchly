@@ -1,0 +1,18 @@
+@model Watchly.Web.Models.ViewModels.MovieListViewModel
+@{ ViewData["Title"] = "Каталог"; }
+<h2>Каталог фильмов</h2>
+<form method="get" class="filters">
+    <input type="text" name="SearchQuery" value="@Model.Filter.SearchQuery" placeholder="Поиск по названию" />
+    <select name="GenreId"><option value="">Все жанры</option>@foreach (var genre in Model.AvailableGenres){<option value="@genre.Id" selected="@(Model.Filter.GenreId == genre.Id)">@genre.Name</option>}</select>
+    <select name="SortBy"><option value="newest" selected="@(Model.Filter.SortBy == "newest")">Сначала новые</option><option value="rating" selected="@(Model.Filter.SortBy == "rating")">По рейтингу</option><option value="title" selected="@(Model.Filter.SortBy == "title")">По названию</option></select>
+    <button type="submit" class="btn-primary">Применить</button>
+</form>
+<div class="movie-grid">
+@foreach (var movie in Model.Movies){
+    <article class="movie-card">
+      <img src="@(string.IsNullOrWhiteSpace(movie.PosterUrl) ? "https://via.placeholder.com/250x360?text=No+Poster" : movie.PosterUrl)" alt="@movie.Title" />
+      <h3>@movie.Title (@movie.ReleaseYear)</h3><p>⭐ @movie.Rating</p><p>@string.Join(", ", movie.Genres)</p>
+      <a class="btn-secondary" asp-action="Detail" asp-route-id="@movie.Id">Подробнее</a>
+    </article>
+}
+</div>

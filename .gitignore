@@ -1,0 +1,22 @@
+# Build artifacts
+**/bin/
+**/obj/
+
+# User/IDE files
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db

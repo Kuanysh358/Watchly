@@ -1,0 +1,61 @@
+@model Watchly.Web.Models.ViewModels.MovieDetailViewModel
+@{
+    ViewData["Title"] = Model.Title;
+    var trailerUrl = Model.TrailerUrl;
+    var trailerEmbedUrl = trailerUrl;
+
+    if (!string.IsNullOrWhiteSpace(trailerUrl))
+    {
+        if (trailerUrl.Contains("youtu.be/", StringComparison.OrdinalIgnoreCase))
+        {
+            var videoId = trailerUrl.Split("youtu.be/").LastOrDefault()?.Split('?', '&').FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(videoId))
+            {
+                trailerEmbedUrl = $"https://www.youtube.com/embed/{videoId}";
+            }
+        }
+        else if (trailerUrl.Contains("youtube.com/watch", StringComparison.OrdinalIgnoreCase))
+        {
+            var marker = "v=";
+            var start = trailerUrl.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (start >= 0)
+            {
+                var videoId = trailerUrl[(start + marker.Length)..].Split('&').FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(videoId))
+                {
+                    trailerEmbedUrl = $"https://www.youtube.com/embed/{videoId}";
+                }
+            }
+        }
+    }
+}
+<div class="detail-layout">
+    <img class="detail-poster" src="@(string.IsNullOrWhiteSpace(Model.PosterUrl) ? "https://via.placeholder.com/300x450?text=No+Poster" : Model.PosterUrl)" alt="@Model.Title" />
+    <div>
+      <h2>@Model.Title (@Model.ReleaseYear)</h2>
+      <p><strong>Рейтинг:</strong> ⭐ @Model.Rating</p>
+      <p><strong>Жанры:</strong> @string.Join(", ", Model.Genres)</p>
+      <p><strong>Режиссер:</strong> @Model.Director</p>
+      <p><strong>Страна:</strong> @Model.Country</p>
+      <p><strong>Длительность:</strong> @(Model.DurationMinutes?.ToString() ?? "—") мин.</p>
+      <p>@Model.Description</p>
+      @if (!string.IsNullOrWhiteSpace(trailerEmbedUrl))
+      {
+          <div class="trailer-player-wrap">
+              <iframe class="trailer-player"
+                      src="@trailerEmbedUrl"
+                      title="Трейлер @Model.Title"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen></iframe>
+          </div>
+      }
+      @if (User.Identity?.IsAuthenticated == true){
+      <form asp-action="ToggleWatchlist" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="movieId" value="@Model.Id" />
+        <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
+        <button type="submit" class="btn-primary">@(Model.IsInWatchlist ? "Убрать из избранного" : "Добавить в избранное")</button>
+      </form>}
+    </div>
+</div>

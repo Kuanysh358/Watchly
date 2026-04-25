@@ -1,0 +1,33 @@
+name: .NET CI
+
+on:
+  push:
+    branches: [ main, "copilot/**" ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore Web
+        run: dotnet restore /home/runner/work/watchly/watchly/src/Watchly.Web/Watchly.Web.csproj
+
+      - name: Build Web
+        run: dotnet build /home/runner/work/watchly/watchly/src/Watchly.Web/Watchly.Web.csproj --configuration Release --no-restore
+
+      - name: Restore Tests
+        run: dotnet restore /home/runner/work/watchly/watchly/tests/Watchly.Tests/Watchly.Tests.csproj
+
+      - name: Test
+        run: dotnet test /home/runner/work/watchly/watchly/tests/Watchly.Tests/Watchly.Tests.csproj --configuration Release --no-restore --verbosity normal
