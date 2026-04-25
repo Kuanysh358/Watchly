@@ -1,61 +1,102 @@
 @model Watchly.Web.Models.ViewModels.MovieDetailViewModel
-@{
-    ViewData["Title"] = Model.Title;
-    var trailerUrl = Model.TrailerUrl;
-    var trailerEmbedUrl = trailerUrl;
+@{ ViewData["Title"] = Model.Title; }
 
-    if (!string.IsNullOrWhiteSpace(trailerUrl))
-    {
-        if (trailerUrl.Contains("youtu.be/", StringComparison.OrdinalIgnoreCase))
-        {
-            var videoId = trailerUrl.Split("youtu.be/").LastOrDefault()?.Split('?', '&').FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(videoId))
+<div class="detail-hero">
+    <div class="detail-layout">
+        <img class="detail-poster" src="@(string.IsNullOrWhiteSpace(Model.PosterUrl) ? "https://via.placeholder.com/300x450?text=No+Poster" : Model.PosterUrl)" alt="@Model.Title" />
+        <div>
+            <h1>@Model.Title (@Model.ReleaseYear)</h1>
+            <p>⭐ @Model.Rating • @string.Join(", ", Model.Genres)</p>
+            <p><strong>Режиссёр:</strong> @Model.Director | <strong>Страна:</strong> @Model.Country | <strong>Длительность:</strong> @(Model.DurationMinutes ?? 0) мин.</p>
+            <p>@Model.Description</p>
+            @if (User.Identity?.IsAuthenticated == true)
             {
-                trailerEmbedUrl = $"https://www.youtube.com/embed/{videoId}";
+                <form asp-action="ToggleWatchlist" method="post" class="mb-2">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="movieId" value="@Model.Id" />
+                    <button type="submit" class="btn-primary">@(Model.IsInWatchlist ? "Убрать из избранного" : "Добавить в избранное")</button>
+                </form>
             }
-        }
-        else if (trailerUrl.Contains("youtube.com/watch", StringComparison.OrdinalIgnoreCase))
-        {
-            var marker = "v=";
-            var start = trailerUrl.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-            if (start >= 0)
-            {
-                var videoId = trailerUrl[(start + marker.Length)..].Split('&').FirstOrDefault();
-                if (!string.IsNullOrWhiteSpace(videoId))
-                {
-                    trailerEmbedUrl = $"https://www.youtube.com/embed/{videoId}";
-                }
-            }
-        }
-    }
-}
-<div class="detail-layout">
-    <img class="detail-poster" src="@(string.IsNullOrWhiteSpace(Model.PosterUrl) ? "https://via.placeholder.com/300x450?text=No+Poster" : Model.PosterUrl)" alt="@Model.Title" />
-    <div>
-      <h2>@Model.Title (@Model.ReleaseYear)</h2>
-      <p><strong>Рейтинг:</strong> ⭐ @Model.Rating</p>
-      <p><strong>Жанры:</strong> @string.Join(", ", Model.Genres)</p>
-      <p><strong>Режиссер:</strong> @Model.Director</p>
-      <p><strong>Страна:</strong> @Model.Country</p>
-      <p><strong>Длительность:</strong> @(Model.DurationMinutes?.ToString() ?? "—") мин.</p>
-      <p>@Model.Description</p>
-      @if (!string.IsNullOrWhiteSpace(trailerEmbedUrl))
-      {
-          <div class="trailer-player-wrap">
-              <iframe class="trailer-player"
-                      src="@trailerEmbedUrl"
-                      title="Трейлер @Model.Title"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      referrerpolicy="strict-origin-when-cross-origin"
-                      allowfullscreen></iframe>
-          </div>
-      }
-      @if (User.Identity?.IsAuthenticated == true){
-      <form asp-action="ToggleWatchlist" method="post">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="movieId" value="@Model.Id" />
-        <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
-        <button type="submit" class="btn-primary">@(Model.IsInWatchlist ? "Убрать из избранного" : "Добавить в избранное")</button>
-      </form>}
+        </div>
     </div>
 </div>
+
+@if (!string.IsNullOrWhiteSpace(Model.VideoUrl))
+{
+    <section class="mb-4">
+        <h3>Плеер</h3>
+        <video id="watchlyPlayer" controls style="width:100%;max-height:520px;background:#000;border-radius:12px;" src="@Model.VideoUrl"></video>
+        @if (Model.ResumePositionSeconds > 0)
+        {
+            <button id="resumeBtn" type="button" class="btn-secondary mt-2">Продолжить с @TimeSpan.FromSeconds(Model.ResumePositionSeconds).ToString(@"hh\:mm\:ss")</button>
+        }
+    </section>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.TrailerUrl))
+{
+    <div class="trailer-player-wrap"><iframe class="trailer-player" src="@Model.TrailerUrl" allowfullscreen></iframe></div>
+}
+
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <section class="mb-4">
+        <h3>Ваша оценка</h3>
+        <form asp-action="SetRating" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="movieId" value="@Model.Id" />
+            <input type="number" name="score" min="1" max="10" value="@(Model.UserRating == 0 ? 8 : Model.UserRating)" />
+            <button class="btn-primary" type="submit">Сохранить рейтинг</button>
+        </form>
+    </section>
+
+    <section class="mb-4">
+        <h3>Комментарии</h3>
+        <form asp-action="AddComment" method="post" class="mb-3">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="movieId" value="@Model.Id" />
+            <textarea name="text" class="form-control" rows="3" required placeholder="Ваш отзыв..."></textarea>
+            <button class="btn-primary mt-2" type="submit">Оставить отзыв</button>
+        </form>
+
+        @foreach (var comment in Model.Comments)
+        {
+            <article class="movie-card mb-2">
+                <strong>@comment.UserName</strong>
+                <small class="text-muted">@comment.CreatedAt.ToLocalTime()</small>
+                <p class="mb-0">@comment.Text</p>
+            </article>
+        }
+    </section>
+}
+
+@section Scripts {
+<script>
+(() => {
+    const player = document.getElementById('watchlyPlayer');
+    if (!player) return;
+    const movieId = @Model.Id;
+    const initialResume = @Model.ResumePositionSeconds;
+    const resumeBtn = document.getElementById('resumeBtn');
+    if (resumeBtn) {
+        resumeBtn.addEventListener('click', () => {
+            player.currentTime = initialResume;
+            player.play();
+        });
+    }
+
+    let lastSent = 0;
+    const save = async () => {
+        const current = Math.floor(player.currentTime || 0);
+        if (current - lastSent < 15) return;
+        lastSent = current;
+        await fetch('@Url.Action("SaveResume", "Cinema")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `movieId=${movieId}&positionSeconds=${current}`
+        });
+    };
+    player.addEventListener('timeupdate', save);
+})();
+</script>
+}

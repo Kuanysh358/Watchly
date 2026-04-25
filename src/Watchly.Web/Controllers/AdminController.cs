@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Watchly.Web.Models.DataModels;
+using Watchly.Web.Data;
 using Watchly.Web.Models.ViewModels;
 using Watchly.Web.Services;
 
@@ -14,322 +14,151 @@ namespace Watchly.Web.Controllers
         private readonly ILogger<AdminController> _logger;
         private readonly ITmdbService _tmdbService;
         private readonly IYouTubeService _youtubeService;
+        private readonly ApplicationDbContext _db;
 
-        public AdminController(IMovieService movieService, ILogger<AdminController> logger, ITmdbService tmdbService, IYouTubeService youtubeService)
+        public AdminController(IMovieService movieService, ILogger<AdminController> logger, ITmdbService tmdbService, IYouTubeService youtubeService, ApplicationDbContext db)
         {
             _movieService = movieService;
             _tmdbService = tmdbService;
             _youtubeService = youtubeService;
             _logger = logger;
+            _db = db;
         }
 
         public async Task<IActionResult> Dashboard([FromQuery] MovieFilterViewModel filter)
-        {
-            var viewModel = await _movieService.GetMoviesAsync(filter, null);
-            return View(viewModel);
-        }
+            => View(await _movieService.GetMoviesAsync(filter, null));
 
         [HttpGet]
-        public async Task<IActionResult> Create()
-        {
-            var model = await _movieService.GetCreateEditViewModelAsync();
-            return View(model);
-        }
+        public async Task<IActionResult> Create() => View(await _movieService.GetCreateEditViewModelAsync());
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(MovieCreateEditViewModel model)
         {
-            if (!ModelState.IsValid)
-            {
-                var genres = (await _movieService.GetCreateEditViewModelAsync()).AvailableGenres;
-                model.AvailableGenres = genres;
-                return View(model);
-            }
-
-            await _movieService.CreateMovieAsync(model);
-            TempData["Success"] = "Фильм успешно добавлен";
+            if (!ModelState.IsValid) return await RenderInvalidModel(model);
+            var createdId = await _movieService.CreateMovieAsync(model);
+            TempData["SuccessMessage"] = createdId.HasValue ? "Фильм успешно добавлен" : "Дубликат найден: фильм уже есть в базе.";
             return RedirectToAction(nameof(Dashboard));
         }
 
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
-            try
-            {
-                var model = await _movieService.GetCreateEditViewModelAsync(id);
-                return View("Create", model);
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
+            try { return View("Create", await _movieService.GetCreateEditViewModelAsync(id)); }
+            catch (KeyNotFoundException) { return NotFound(); }
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(MovieCreateEditViewModel model)
         {
-            if (!ModelState.IsValid)
-            {
-                var genres = (await _movieService.GetCreateEditViewModelAsync()).AvailableGenres;
-                model.AvailableGenres = genres;
-                return View("Create", model);
-            }
-
-            try
-            {
-                await _movieService.UpdateMovieAsync(model);
-                TempData["Success"] = "Фильм успешно обновлён";
-                return RedirectToAction(nameof(Dashboard));
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
+            if (!ModelState.IsValid) return await RenderInvalidModel(model, true);
+            await _movieService.UpdateMovieAsync(model);
+            TempData["SuccessMessage"] = "Фильм обновлён";
+            return RedirectToAction(nameof(Dashboard));
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
             await _movieService.DeleteMovieAsync(id);
-            TempData["Success"] = "Фильм успешно удалён";
+            TempData["SuccessMessage"] = "Фильм удалён";
             return RedirectToAction(nameof(Dashboard));
         }
 
         [HttpGet]
         public async Task<IActionResult> SearchTmdb(string query)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(query))
-                    return Json(new List<object>());
-
-                var movies = await _tmdbService.SearchMoviesAsync(query);
-                return Json(movies.Take(10));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error searching TMDB");
-                return Json(new List<object>());
-            }
-        }
+            => string.IsNullOrWhiteSpace(query) ? Json(new List<object>()) : Json((await _tmdbService.SearchMoviesAsync(query)).Take(10));
 
         [HttpGet]
         public async Task<IActionResult> GetTmdbMovie(int tmdbId)
         {
-            try
+            var movie = await _tmdbService.GetMovieDetailAsync(tmdbId);
+            if (movie == null) return NotFound();
+            var videoId = await _youtubeService.SearchTrailerAsync($"{movie.Title} {movie.ReleaseYear} trailer official");
+            return Json(new
             {
-                var movie = await _tmdbService.GetMovieDetailAsync(tmdbId);
-                if (movie == null)
-                    return NotFound();
-
-                var trailerQuery = movie.ReleaseYear.HasValue
-                    ? $"{movie.Title} {movie.ReleaseYear} trailer official"
-                    : $"{movie.Title} trailer official";
-                var videoId = await _youtubeService.SearchTrailerAsync(trailerQuery);
-                var trailerUrl = string.IsNullOrWhiteSpace(videoId) ? null : _youtubeService.GetEmbedUrl(videoId);
-
-                return Json(new
-                {
-                    id = movie.Id,
-                    title = movie.Title,
-                    posterPath = movie.PosterPath,
-                    voteAverage = movie.VoteAverage,
-                    releaseYear = movie.ReleaseYear,
-                    overview = movie.Overview,
-                    runtime = movie.Runtime,
-                    country = movie.Country,
-                    director = movie.Director,
-                    genres = movie.Genres,
-                    trailerUrl,
-                    videoId
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting TMDB movie detail");
-                return StatusCode(500);
-            }
+                id = movie.Id,
+                title = movie.Title,
+                posterPath = movie.PosterPath,
+                voteAverage = movie.VoteAverage,
+                releaseYear = movie.ReleaseYear,
+                overview = movie.Overview,
+                runtime = movie.Runtime,
+                country = movie.Country,
+                director = movie.Director,
+                genres = movie.Genres,
+                trailerUrl = string.IsNullOrWhiteSpace(videoId) ? null : _youtubeService.GetEmbedUrl(videoId),
+                videoId
+            });
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> AutoImportTmdb([FromBody] AutoImportRequest? request)
         {
-            try
+            var excludedTmdbIds = (request?.ExcludedTmdbIds ?? new()).ToHashSet();
+            var batchSize = Math.Clamp(request?.BatchSize ?? 5, 1, 10);
+            var popularMovies = (await _tmdbService.GetPopularMoviesAsync()).Where(m => !excludedTmdbIds.Contains(m.Id)).OrderBy(_ => Guid.NewGuid()).Take(batchSize).ToList();
+
+            var dbGenres = await _db.Genres.ToListAsync();
+            var imported = new List<object>();
+            var importedTmdbIds = new List<int>();
+
+            foreach (var popularMovie in popularMovies)
             {
-                var excludedTmdbIds = (request?.ExcludedTmdbIds ?? new List<int>()).ToHashSet();
-                var batchSize = Math.Clamp(request?.BatchSize ?? 5, 1, 10);
+                var detail = await _tmdbService.GetMovieDetailAsync(popularMovie.Id);
+                if (detail == null) continue;
 
-                var popularMovies = (await _tmdbService.GetPopularMoviesAsync())
-                    .Where(m => !excludedTmdbIds.Contains(m.Id))
-                    .OrderBy(_ => Guid.NewGuid())
-                    .Take(batchSize)
-                    .ToList();
-
-                if (!popularMovies.Any())
+                var selectedGenreIds = new List<int>();
+                foreach (var genreName in detail.Genres.Distinct(StringComparer.OrdinalIgnoreCase))
                 {
-                    return Json(new
+                    var genre = dbGenres.FirstOrDefault(g => g.Name.Equals(genreName, StringComparison.OrdinalIgnoreCase));
+                    if (genre == null)
                     {
-                        importedCount = 0,
-                        importedTmdbIds = new List<int>(),
-                        movies = new List<object>(),
-                        message = "Нет новых фильмов для импорта."
-                    });
-                }
-
-                var imported = new List<object>();
-                var importedTmdbIds = new List<int>();
-
-                foreach (var popularMovie in popularMovies)
-                {
-                    var detail = await _tmdbService.GetMovieDetailAsync(popularMovie.Id);
-                    if (detail == null)
-                        continue;
-
-                    var trailerQuery = detail.ReleaseYear.HasValue
-                        ? $"{detail.Title} {detail.ReleaseYear} trailer official"
-                        : $"{detail.Title} trailer official";
-
-                    var videoId = await _youtubeService.SearchTrailerAsync(trailerQuery);
-                    var trailerUrl = string.IsNullOrWhiteSpace(videoId) ? null : _youtubeService.GetEmbedUrl(videoId);
-
-                    var createModel = new MovieCreateEditViewModel
-                    {
-                        Title = detail.Title,
-                        Description = detail.Overview,
-                        ReleaseYear = detail.ReleaseYear ?? DateTime.UtcNow.Year,
-                        Rating = detail.VoteAverage,
-                        PosterUrl = string.IsNullOrWhiteSpace(detail.PosterPath)
-                            ? null
-                            : $"https://image.tmdb.org/t/p/w500{detail.PosterPath}",
-                        TrailerUrl = trailerUrl,
-                        TmdbId = detail.Id,
-                        DurationMinutes = detail.Runtime,
-                        Country = detail.Country,
-                        Director = detail.Director,
-                        SelectedGenreIds = new List<int>()
-                    };
-
-                    await _movieService.CreateMovieAsync(createModel);
-
-                    importedTmdbIds.Add(detail.Id);
-                    imported.Add(new
-                    {
-                        title = detail.Title,
-                        releaseYear = detail.ReleaseYear,
-                        rating = detail.VoteAverage,
-                        trailerUrl,
-                        videoId
-                    });
-                }
-
-                return Json(new
-                {
-                    importedCount = imported.Count,
-                    importedTmdbIds,
-                    movies = imported,
-                    message = imported.Count > 0
-                        ? $"Импортировано фильмов: {imported.Count}"
-                        : "Не удалось импортировать фильмы."
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error auto importing TMDB movies");
-                return StatusCode(500, new { message = "Ошибка авто-импорта TMDB" });
-            }
-        }
-
-        [HttpGet("import-genres")]
-        public async Task<IActionResult> ImportGenres()
-        {
-            try
-            {
-                // ========== ПОЛУЧИТЬ ЖАНРЫ С TMDB ==========
-
-                var tmdbGenres = await _tmdbService.GetGenresAsync();
-
-                if (tmdbGenres.Count == 0)
-                {
-                    return BadRequest(new { error = "Не удалось получить жанры" });
-                }
-
-                int added = 0;
-                int updated = 0;
-
-                // ========== ДОБАВИТЬ ИЛИ ОБНОВИТЬ ЖАНРЫ ==========
-
-                foreach (var tmdbGenre in tmdbGenres)
-                {
-                    // ========== ПРОВЕРИТЬ, УЖЕ ЛИ ЕСТЬ ==========
-
-                    var existing = await dbContext.Genres
-                        .FirstOrDefaultAsync(g => g.Id == tmdbGenre.Id);
-
-                    if (existing == null)
-                    {
-                        // ========== НОВЫЙ ЖАНР ==========
-
-                        var newGenre = new Genre
-                        {
-                            Id = tmdbGenre.Id,
-                            Name = tmdbGenre.Name
-                        };
-
-                        _dbContext.Genres.Add(newGenre);
-                        added++;
+                        genre = new Models.DataModels.Genre { Name = genreName };
+                        _db.Genres.Add(genre);
+                        await _db.SaveChangesAsync();
+                        dbGenres.Add(genre);
                     }
-                    else if (existing.Name != tmdbGenre.Name)
-                    {
-                        // ========== ОБНОВИТЬ НАЗВАНИЕ ==========
-
-                        existing.Name = tmdbGenre.Name;
-                        _dbContext.Genres.Update(existing);
-                        updated++;
-                    }
+                    selectedGenreIds.Add(genre.Id);
                 }
 
-                // ========== СОХРАНИТЬ ==========
-
-                await TmdbService.SaveChangesAsync();
-
-                return Json(new
+                var videoId = await _youtubeService.SearchTrailerAsync($"{detail.Title} {detail.ReleaseYear} trailer official");
+                var createModel = new MovieCreateEditViewModel
                 {
-                    success = true,
-                    message = $"Добавлено: {added}, Обновлено: {updated}",
-                    added,
-                    updated
-                });
+                    Title = detail.Title,
+                    Description = detail.Overview,
+                    ReleaseYear = detail.ReleaseYear ?? DateTime.UtcNow.Year,
+                    Rating = detail.VoteAverage,
+                    PosterUrl = string.IsNullOrWhiteSpace(detail.PosterPath) ? null : $"https://image.tmdb.org/t/p/w500{detail.PosterPath}",
+                    TrailerUrl = string.IsNullOrWhiteSpace(videoId) ? null : _youtubeService.GetEmbedUrl(videoId),
+                    TmdbId = detail.Id,
+                    DurationMinutes = detail.Runtime,
+                    Country = detail.Country,
+                    Director = detail.Director,
+                    SelectedGenreIds = selectedGenreIds
+                };
+
+                var createdId = await _movieService.CreateMovieAsync(createModel);
+                if (!createdId.HasValue) continue;
+
+                importedTmdbIds.Add(detail.Id);
+                imported.Add(new { title = detail.Title, releaseYear = detail.ReleaseYear, rating = detail.VoteAverage, trailerUrl = createModel.TrailerUrl, videoId });
             }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+
+            return Json(new { importedCount = imported.Count, importedTmdbIds, movies = imported, message = imported.Count > 0 ? $"Импортировано фильмов: {imported.Count}" : "Нет новых фильмов (дубликаты исключены)." });
         }
 
         [HttpGet]
         public async Task<IActionResult> SearchYouTubeTrailer(string query)
         {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(query))
-                    return NotFound();
+            if (string.IsNullOrWhiteSpace(query)) return NotFound();
+            var videoId = await _youtubeService.SearchTrailerAsync(query);
+            return string.IsNullOrWhiteSpace(videoId) ? NotFound() : Json(new { trailerUrl = _youtubeService.GetEmbedUrl(videoId) });
+        }
 
-                var videoId = await _youtubeService.SearchTrailerAsync(query);
-                if (videoId == null)
-                    return NotFound();
-
-                var embedUrl = _youtubeService.GetEmbedUrl(videoId);
-                return Json(new { trailerUrl = embedUrl });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error searching YouTube trailer");
-                return StatusCode(500);
-            }
+        private async Task<IActionResult> RenderInvalidModel(MovieCreateEditViewModel model, bool edit = false)
+        {
+            model.AvailableGenres = (await _movieService.GetCreateEditViewModelAsync()).AvailableGenres;
+            return View(edit ? "Create" : "Create", model);
         }
 
         public class AutoImportRequest

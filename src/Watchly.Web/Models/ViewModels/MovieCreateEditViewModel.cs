@@ -32,6 +32,10 @@ namespace Watchly.Web.Models.ViewModels
         [Display(Name = "URL трейлера")]
         public string? TrailerUrl { get; set; }
 
+        [Url(ErrorMessage = "Некорректный URL")]
+        [Display(Name = "URL видео/плеера")]
+        public string? VideoUrl { get; set; }
+
         [Display(Name = "TMDB ID")]
         public int? TmdbId { get; set; }
 

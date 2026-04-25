@@ -20,6 +20,8 @@ namespace Watchly.Web.Models.DataModels
 
         public string? TrailerUrl { get; set; }
 
+        public string? VideoUrl { get; set; }
+
         public int? TmdbId { get; set; }
 
         public int? DurationMinutes { get; set; }
@@ -37,5 +39,9 @@ namespace Watchly.Web.Models.DataModels
         public virtual ICollection<Watchlist> Watchlists { get; set; } = new List<Watchlist>();
 
         public virtual ICollection<ViewHistory> ViewHistories { get; set; } = new List<ViewHistory>();
+
+        public virtual ICollection<MovieComment> Comments { get; set; } = new List<MovieComment>();
+
+        public virtual ICollection<MovieRating> Ratings { get; set; } = new List<MovieRating>();
     }
 }

@@ -58,6 +58,12 @@
                 </div>
             </div>
 
+            <div class="mb-3">
+                <label asp-for="VideoUrl" class="form-label admin-label"></label>
+                <input asp-for="VideoUrl" class="form-control bg-secondary text-light" placeholder="https://cdn.example.com/movie.mp4" />
+                <span asp-validation-for="VideoUrl" class="invalid-feedback"></span>
+            </div>
+
             <div class="admin-trailer-cinema mb-4" id="trailerPreviewWrap" style="display:none;">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <strong>🎥 Трейлер (онлайн-плеер)</strong>

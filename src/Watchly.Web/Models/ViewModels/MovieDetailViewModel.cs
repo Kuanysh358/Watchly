@@ -9,6 +9,11 @@ namespace Watchly.Web.Models.ViewModels
         public decimal Rating { get; set; }
         public string? PosterUrl { get; set; }
         public string? TrailerUrl { get; set; }
+        public string? VideoUrl { get; set; }
+        public int ResumePositionSeconds { get; set; }
+        public double UserWatchedHours { get; set; }
+        public int UserRating { get; set; }
+        public List<CommentViewModel> Comments { get; set; } = new();
         public int? DurationMinutes { get; set; }
         public string? Country { get; set; }
         public string? Director { get; set; }

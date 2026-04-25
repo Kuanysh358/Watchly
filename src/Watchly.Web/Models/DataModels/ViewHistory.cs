@@ -14,6 +14,10 @@ namespace Watchly.Web.Models.DataModels
 
         public DateTime LastViewedAt { get; set; } = DateTime.UtcNow;
 
+        public int LastPositionSeconds { get; set; }
+
+        public double WatchedMinutesTotal { get; set; }
+
         public virtual ApplicationUser User { get; set; } = null!;
 
         public virtual Movie Movie { get; set; } = null!;

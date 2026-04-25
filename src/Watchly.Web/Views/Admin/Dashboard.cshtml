@@ -51,6 +51,19 @@
     </table>
 </div>
 
+
+
+<div class="admin-form-card mt-4">
+    <h4>Аккаунт администратора</h4>
+    <form asp-controller="Account" asp-action="UpdateAdminCredentials" method="post" class="row g-2">
+        @Html.AntiForgeryToken()
+        <div class="col-md-4"><input class="form-control" name="email" type="email" placeholder="Новый email" required /></div>
+        <div class="col-md-3"><input class="form-control" name="currentPassword" type="password" placeholder="Текущий пароль" /></div>
+        <div class="col-md-3"><input class="form-control" name="newPassword" type="password" placeholder="Новый пароль" /></div>
+        <div class="col-md-2"><button class="btn-primary w-100" type="submit">Обновить</button></div>
+    </form>
+</div>
+
 @section Scripts {
     <script>
         const autoImportUrl = '@Url.Action("AutoImportTmdb", "Admin")';
