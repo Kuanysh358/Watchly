@@ -1,14 +1,57 @@
-@{
-    ViewData["Title"] = "Главная";
-}
+@model Watchly.Web.Models.ViewModels.HomeIndexViewModel
+@{ ViewData["Title"] = "Главная"; }
+
 <section class="hero">
     <h1>Watchly</h1>
-    <p>Открывайте фильмы, сохраняйте в избранное и отслеживайте историю просмотров.</p>
+    <p>Тёмный онлайн-кинотеатр: популярные, новые и подборки по жанрам.</p>
     <div class="hero-actions">
-        <a class="btn-primary" asp-controller="Cinema" asp-action="Index">Перейти в каталог</a>
-        @if (User.Identity?.IsAuthenticated != true)
+        <a class="btn-primary" asp-controller="Cinema" asp-action="Index">Открыть каталог</a>
+    </div>
+</section>
+
+<section class="mb-4">
+    <h3>🔥 Популярные</h3>
+    <div class="movie-grid">
+        @foreach (var movie in Model.Popular)
         {
-            <a class="btn-secondary" asp-controller="Account" asp-action="Register">Создать аккаунт</a>
+            <article class="movie-card">
+                <img src="@(string.IsNullOrWhiteSpace(movie.PosterUrl) ? "https://via.placeholder.com/250x360?text=No+Poster" : movie.PosterUrl)" alt="@movie.Title" />
+                <h4>@movie.Title (@movie.ReleaseYear)</h4>
+                <p>⭐ @movie.Rating</p>
+                <a class="btn-secondary" asp-controller="Cinema" asp-action="Detail" asp-route-id="@movie.Id">Подробнее</a>
+            </article>
         }
     </div>
 </section>
+
+<section class="mb-4">
+    <h3>🆕 Новые релизы</h3>
+    <div class="movie-grid">
+        @foreach (var movie in Model.NewReleases)
+        {
+            <article class="movie-card">
+                <img src="@(string.IsNullOrWhiteSpace(movie.PosterUrl) ? "https://via.placeholder.com/250x360?text=No+Poster" : movie.PosterUrl)" alt="@movie.Title" />
+                <h4>@movie.Title (@movie.ReleaseYear)</h4>
+                <p>@string.Join(", ", movie.Genres)</p>
+                <a class="btn-secondary" asp-controller="Cinema" asp-action="Detail" asp-route-id="@movie.Id">Подробнее</a>
+            </article>
+        }
+    </div>
+</section>
+
+@foreach (var section in Model.ByGenres)
+{
+    <section class="mb-4">
+        <h3>🎭 @section.Key</h3>
+        <div class="movie-grid">
+            @foreach (var movie in section.Value)
+            {
+                <article class="movie-card">
+                    <img src="@(string.IsNullOrWhiteSpace(movie.PosterUrl) ? "https://via.placeholder.com/250x360?text=No+Poster" : movie.PosterUrl)" alt="@movie.Title" />
+                    <h4>@movie.Title (@movie.ReleaseYear)</h4>
+                    <a class="btn-secondary" asp-controller="Cinema" asp-action="Detail" asp-route-id="@movie.Id">Подробнее</a>
+                </article>
+            }
+        </div>
+    </section>
+}

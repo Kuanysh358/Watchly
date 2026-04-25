@@ -152,7 +152,7 @@
                                 <i class="fas fa-user"></i> @User.Identity?.Name
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end bg-dark" aria-labelledby="userMenu">
-                                <li><a class="dropdown-item text-light" href="#">Профиль</a></li>
+                                <li><a class="dropdown-item text-light" href="@Url.Action("Profile", "Account")">Профиль</a></li>
                                 <li><hr class="dropdown-divider" /></li>
                                 <li>
                                     <form method="post" action="@Url.Action("Logout", "Account")">
@@ -177,6 +177,14 @@
                             </a>
                         </li>
                     }
+                    <li class="nav-item d-flex align-items-center">
+                        <form method="post" action="@Url.Action("SetLanguage", "Home")" class="d-flex gap-1">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                            <button class="btn btn-sm btn-outline-light" name="lang" value="ru" type="submit">RU</button>
+                            <button class="btn btn-sm btn-outline-light" name="lang" value="kz" type="submit">KZ</button>
+                        </form>
+                    </li>
                 </ul>
             </div>
         </div>

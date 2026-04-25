@@ -1,31 +1,37 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using Watchly.Web.Models.ViewModels;
+using Watchly.Web.Services;
 
 namespace Watchly.Web.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
+        private readonly IMovieService _movieService;
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(IMovieService movieService)
         {
-            _logger = logger;
+            _movieService = movieService;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            return View();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return View(await _movieService.GetHomeDataAsync(userId));
         }
 
-        public IActionResult Privacy()
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult SetLanguage(string lang, string? returnUrl)
         {
-            return View();
+            var selected = lang == "kz" ? "kz" : "ru";
+            Response.Cookies.Append("watchly_lang", selected, new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1) });
+            return Redirect(string.IsNullOrWhiteSpace(returnUrl) ? Url.Action("Index")! : returnUrl);
         }
+
+        public IActionResult Privacy() => View();
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = System.Diagnostics.Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
+        public IActionResult Error() => View(new ErrorViewModel { RequestId = System.Diagnostics.Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 }

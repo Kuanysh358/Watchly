@@ -9,65 +9,62 @@ namespace Watchly.Web.Controllers
     public class CinemaController : Controller
     {
         private readonly IMovieService _movieService;
-        private readonly ILogger<CinemaController> _logger;
 
-        public CinemaController(IMovieService movieService, ILogger<CinemaController> logger)
+        public CinemaController(IMovieService movieService)
         {
             _movieService = movieService;
-            _logger = logger;
         }
 
         public async Task<IActionResult> Index([FromQuery] MovieFilterViewModel filter)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var viewModel = await _movieService.GetMoviesAsync(filter, userId);
-            return View(viewModel);
+            return View(await _movieService.GetMoviesAsync(filter, userId));
         }
 
         public async Task<IActionResult> Detail(int id)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var movie = await _movieService.GetMovieDetailAsync(id, userId);
-
-            if (movie == null)
-                return NotFound();
-
-            if (userId != null)
-            {
-                await _movieService.RecordViewAsync(id, userId);
-            }
-
+            if (movie == null) return NotFound();
+            if (userId != null) await _movieService.RecordViewAsync(id, userId);
             return View(movie);
         }
 
-        [Authorize]
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        [Authorize, HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddComment(int movieId, string text)
+        {
+            if (!string.IsNullOrWhiteSpace(text))
+                await _movieService.AddCommentAsync(movieId, User.FindFirstValue(ClaimTypes.NameIdentifier)!, text);
+            return RedirectToAction(nameof(Detail), new { id = movieId });
+        }
+
+        [Authorize, HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetRating(int movieId, int score)
+        {
+            score = Math.Clamp(score, 1, 10);
+            await _movieService.SetRatingAsync(movieId, User.FindFirstValue(ClaimTypes.NameIdentifier)!, score);
+            return RedirectToAction(nameof(Detail), new { id = movieId });
+        }
+
+        [Authorize, HttpPost]
+        public async Task<IActionResult> SaveResume(int movieId, int positionSeconds)
+        {
+            await _movieService.SaveResumePositionAsync(movieId, User.FindFirstValue(ClaimTypes.NameIdentifier)!, positionSeconds);
+            return Ok();
+        }
+
+        [Authorize, HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleWatchlist(int movieId, string? returnUrl)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            await _movieService.ToggleWatchlistAsync(movieId, userId);
-
-            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-                return Redirect(returnUrl);
-
+            await _movieService.ToggleWatchlistAsync(movieId, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
             return RedirectToAction(nameof(Detail), new { id = movieId });
         }
 
         [Authorize]
-        public async Task<IActionResult> Watchlist()
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var movies = await _movieService.GetWatchlistAsync(userId);
-            return View(movies);
-        }
+        public async Task<IActionResult> Watchlist() => View(await _movieService.GetWatchlistAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!));
 
         [Authorize]
-        public async Task<IActionResult> ViewHistory()
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var movies = await _movieService.GetViewHistoryAsync(userId);
-            return View(movies);
-        }
+        public async Task<IActionResult> ViewHistory() => View(await _movieService.GetViewHistoryAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!));
     }
 }

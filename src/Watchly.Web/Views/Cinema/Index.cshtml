@@ -4,6 +4,9 @@
 <form method="get" class="filters">
     <input type="text" name="SearchQuery" value="@Model.Filter.SearchQuery" placeholder="Поиск по названию" />
     <select name="GenreId"><option value="">Все жанры</option>@foreach (var genre in Model.AvailableGenres){<option value="@genre.Id" selected="@(Model.Filter.GenreId == genre.Id)">@genre.Name</option>}</select>
+    <input type="number" name="YearFrom" value="@Model.Filter.YearFrom" placeholder="Год от" />
+    <input type="number" name="YearTo" value="@Model.Filter.YearTo" placeholder="Год до" />
+    <input type="number" name="RatingFrom" step="0.1" value="@Model.Filter.RatingFrom" placeholder="Рейтинг от" />
     <select name="SortBy"><option value="newest" selected="@(Model.Filter.SortBy == "newest")">Сначала новые</option><option value="rating" selected="@(Model.Filter.SortBy == "rating")">По рейтингу</option><option value="title" selected="@(Model.Filter.SortBy == "title")">По названию</option></select>
     <button type="submit" class="btn-primary">Применить</button>
 </form>

@@ -1,0 +1,26 @@
+@model Watchly.Web.Models.ViewModels.ProfileEditViewModel
+@{ ViewData["Title"] = "Профиль"; }
+
+<div class="form-card">
+    <h2>Профиль пользователя</h2>
+    <form method="post">
+        @Html.AntiForgeryToken()
+        <label>Имя</label>
+        <input asp-for="FullName" />
+        <label>Email</label>
+        <input asp-for="Email" type="email" />
+        <label>Аватар (URL)</label>
+        <input asp-for="AvatarUrl" placeholder="https://..." />
+        <label>Текущий пароль</label>
+        <input asp-for="CurrentPassword" type="password" />
+        <label>Новый пароль</label>
+        <input asp-for="NewPassword" type="password" />
+        <button class="btn-primary" type="submit">Сохранить</button>
+    </form>
+
+    <hr />
+    <h4>Статистика</h4>
+    <p>Просмотрено фильмов: <strong>@Model.TotalViewedMovies</strong></p>
+    <p>Просмотрено часов: <strong>@Model.TotalWatchedHours.ToString("0.0")</strong></p>
+    <p>Частые жанры: <strong>@string.Join(", ", Model.TopGenres)</strong></p>
+</div>
