@@ -18,6 +18,7 @@ namespace Watchly.Web.Data
         public DbSet<ViewHistory> ViewHistories => Set<ViewHistory>();
         public DbSet<MovieComment> MovieComments => Set<MovieComment>();
         public DbSet<MovieRating> MovieRatings => Set<MovieRating>();
+        public DbSet<CommentLike> CommentLikes => Set<CommentLike>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -73,6 +74,14 @@ namespace Watchly.Web.Data
                 entity.HasOne(e => e.Movie).WithMany(m => m.Ratings).HasForeignKey(e => e.MovieId).OnDelete(DeleteBehavior.Cascade);
                 entity.HasOne(e => e.User).WithMany(u => u.Ratings).HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
                 entity.HasIndex(e => new { e.UserId, e.MovieId }).IsUnique();
+            });
+
+            builder.Entity<CommentLike>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.Comment).WithMany(c => c.Likes).HasForeignKey(e => e.CommentId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.NoAction);
+                entity.HasIndex(e => new { e.CommentId, e.UserId }).IsUnique();
             });
 
             builder.Entity<Genre>().HasData(

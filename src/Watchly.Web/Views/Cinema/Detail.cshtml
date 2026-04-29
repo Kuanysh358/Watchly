@@ -3,19 +3,33 @@
 
 <div class="detail-hero">
     <div class="detail-layout">
-        <img class="detail-poster" src="@(string.IsNullOrWhiteSpace(Model.PosterUrl) ? "https://via.placeholder.com/300x450?text=No+Poster" : Model.PosterUrl)" alt="@Model.Title" />
-        <div>
-            <h1>@Model.Title (@Model.ReleaseYear)</h1>
-            <p>⭐ @Model.Rating • @string.Join(", ", Model.Genres)</p>
-            <p><strong>Режиссёр:</strong> @Model.Director | <strong>Страна:</strong> @Model.Country | <strong>Длительность:</strong> @(Model.DurationMinutes ?? 0) мин.</p>
-            <p>@Model.Description</p>
+        <div class="detail-poster-wrap">
+            <img class="detail-poster" src="@(string.IsNullOrWhiteSpace(Model.PosterUrl) ? "https://via.placeholder.com/300x450?text=No+Poster" : Model.PosterUrl)" alt="@Model.Title" />
+        </div>
+        <div class="detail-meta">
+            <h1 class="detail-title">@Model.Title <span class="detail-year">(@Model.ReleaseYear)</span></h1>
+            <div class="detail-info-row">
+                <span class="badge-rating"><i class="fas fa-star"></i> @Model.Rating</span>
+                <span class="detail-genres">@string.Join(", ", Model.Genres)</span>
+            </div>
+            <div class="detail-info-row text-muted small">
+                @if (!string.IsNullOrWhiteSpace(Model.Director)) { <span><strong>Режиссёр:</strong> @Model.Director</span> }
+                @if (!string.IsNullOrWhiteSpace(Model.Country)) { <span><strong>Страна:</strong> @Model.Country</span> }
+                @if (Model.DurationMinutes.HasValue) { <span><strong>Длительность:</strong> @Model.DurationMinutes мин.</span> }
+            </div>
+            <p class="detail-description">@Model.Description</p>
             @if (User.Identity?.IsAuthenticated == true)
             {
-                <form asp-action="ToggleWatchlist" method="post" class="mb-2">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="movieId" value="@Model.Id" />
-                    <button type="submit" class="btn-primary">@(Model.IsInWatchlist ? "Убрать из избранного" : "Добавить в избранное")</button>
-                </form>
+                <div class="d-flex gap-2 flex-wrap mt-3">
+                    <form asp-action="ToggleWatchlist" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="movieId" value="@Model.Id" />
+                        <button type="submit" class="@(Model.IsInWatchlist ? "btn-danger" : "btn-primary")">
+                            <i class="fas @(Model.IsInWatchlist ? "fa-heart-broken" : "fa-heart")"></i>
+                            @(Model.IsInWatchlist ? "Убрать из избранного" : "В избранное")
+                        </button>
+                    </form>
+                </div>
             }
         </div>
     </div>
@@ -23,50 +37,102 @@
 
 @if (!string.IsNullOrWhiteSpace(Model.VideoUrl))
 {
-    <section class="mb-4">
-        <h3>Плеер</h3>
-        <video id="watchlyPlayer" controls style="width:100%;max-height:520px;background:#000;border-radius:12px;" src="@Model.VideoUrl"></video>
+    <section class="player-section mb-4">
+        <h3 class="section-title"><i class="fas fa-play-circle"></i> Плеер</h3>
+        <div class="video-player-wrap">
+            <video id="watchlyPlayer" controls style="width:100%;max-height:520px;background:#000;border-radius:12px;" preload="metadata">
+                <source src="@Model.VideoUrl" />
+                Ваш браузер не поддерживает видео.
+            </video>
+        </div>
         @if (Model.ResumePositionSeconds > 0)
         {
-            <button id="resumeBtn" type="button" class="btn-secondary mt-2">Продолжить с @TimeSpan.FromSeconds(Model.ResumePositionSeconds).ToString(@"hh\:mm\:ss")</button>
+            <div class="mt-2">
+                <button id="resumeBtn" type="button" class="btn-secondary">
+                    <i class="fas fa-redo"></i> Продолжить с @TimeSpan.FromSeconds(Model.ResumePositionSeconds).ToString(@"hh\:mm\:ss")
+                </button>
+            </div>
         }
     </section>
 }
 
 @if (!string.IsNullOrWhiteSpace(Model.TrailerUrl))
 {
-    <div class="trailer-player-wrap"><iframe class="trailer-player" src="@Model.TrailerUrl" allowfullscreen></iframe></div>
+    <section class="mb-4">
+        <h3 class="section-title"><i class="fas fa-video"></i> Трейлер</h3>
+        <div class="trailer-player-wrap"><iframe class="trailer-player" src="@Model.TrailerUrl" allowfullscreen></iframe></div>
+    </section>
 }
 
 @if (User.Identity?.IsAuthenticated == true)
 {
     <section class="mb-4">
-        <h3>Ваша оценка</h3>
-        <form asp-action="SetRating" method="post">
+        <h3 class="section-title"><i class="fas fa-star-half-alt"></i> Ваша оценка</h3>
+        <form asp-action="SetRating" method="post" class="rating-form">
             @Html.AntiForgeryToken()
             <input type="hidden" name="movieId" value="@Model.Id" />
-            <input type="number" name="score" min="1" max="10" value="@(Model.UserRating == 0 ? 8 : Model.UserRating)" />
-            <button class="btn-primary" type="submit">Сохранить рейтинг</button>
+            <div class="rating-stars" id="ratingStars">
+                @for (int i = 1; i <= 10; i++)
+                {
+                    <button type="button" class="star-btn @(Model.UserRating >= i ? "active" : "")" data-value="@i">@i</button>
+                }
+            </div>
+            <input type="hidden" name="score" id="ratingScore" value="@(Model.UserRating == 0 ? 8 : Model.UserRating)" />
+            <button class="btn-primary mt-2" type="submit"><i class="fas fa-check"></i> Сохранить оценку</button>
         </form>
     </section>
 
     <section class="mb-4">
-        <h3>Комментарии</h3>
-        <form asp-action="AddComment" method="post" class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="section-title mb-0"><i class="fas fa-comments"></i> Комментарии (@Model.Comments.Count)</h3>
+            <div class="comment-sort">
+                <a asp-action="Detail" asp-route-id="@Model.Id" asp-route-commentSort="newest"
+                   class="btn-secondary btn-sm @(ViewBag.CommentSort == "newest" ? "active" : "")">
+                    Новые
+                </a>
+                <a asp-action="Detail" asp-route-id="@Model.Id" asp-route-commentSort="popular"
+                   class="btn-secondary btn-sm @(ViewBag.CommentSort == "popular" ? "active" : "")">
+                    Популярные
+                </a>
+            </div>
+        </div>
+        <form asp-action="AddComment" method="post" class="mb-4">
             @Html.AntiForgeryToken()
             <input type="hidden" name="movieId" value="@Model.Id" />
-            <textarea name="text" class="form-control" rows="3" required placeholder="Ваш отзыв..."></textarea>
-            <button class="btn-primary mt-2" type="submit">Оставить отзыв</button>
+            <textarea name="text" class="form-control comment-input" rows="3" required placeholder="Ваш отзыв о фильме..."></textarea>
+            <button class="btn-primary mt-2" type="submit"><i class="fas fa-paper-plane"></i> Оставить отзыв</button>
         </form>
 
-        @foreach (var comment in Model.Comments)
-        {
-            <article class="movie-card mb-2">
-                <strong>@comment.UserName</strong>
-                <small class="text-muted">@comment.CreatedAt.ToLocalTime()</small>
-                <p class="mb-0">@comment.Text</p>
-            </article>
-        }
+        <div class="comments-list">
+            @foreach (var comment in Model.Comments)
+            {
+                <article class="comment-card">
+                    <div class="comment-header">
+                        <strong class="comment-author">@comment.UserName</strong>
+                        <small class="comment-date text-muted">@comment.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</small>
+                    </div>
+                    <p class="comment-text">@comment.Text</p>
+                    <div class="comment-actions">
+                        <button type="button" class="btn-like @(comment.LikedByCurrentUser ? "liked" : "")"
+                                data-comment-id="@comment.Id"
+                                onclick="toggleLike(this, @comment.Id)">
+                            <i class="fas fa-thumbs-up"></i> @comment.LikeCount
+                        </button>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <form asp-action="DeleteComment" method="post" style="display:inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="commentId" value="@comment.Id" />
+                                <input type="hidden" name="movieId" value="@Model.Id" />
+                                <button type="submit" class="btn-danger btn-sm" onclick="return confirm('Удалить комментарий?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </article>
+            }
+        </div>
     </section>
 }
 
@@ -82,6 +148,7 @@
         resumeBtn.addEventListener('click', () => {
             player.currentTime = initialResume;
             player.play();
+            resumeBtn.style.display = 'none';
         });
     }
 
@@ -90,13 +157,45 @@
         const current = Math.floor(player.currentTime || 0);
         if (current - lastSent < 15) return;
         lastSent = current;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]');
         await fetch('@Url.Action("SaveResume", "Cinema")', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `movieId=${movieId}&positionSeconds=${current}`
+            body: `movieId=${movieId}&positionSeconds=${current}${token ? '&__RequestVerificationToken=' + encodeURIComponent(token.value) : ''}`
         });
     };
     player.addEventListener('timeupdate', save);
+    window.addEventListener('beforeunload', save);
 })();
+
+// Rating stars
+const starBtns = document.querySelectorAll('.star-btn');
+const scoreInput = document.getElementById('ratingScore');
+if (starBtns.length && scoreInput) {
+    starBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const val = parseInt(btn.dataset.value);
+            scoreInput.value = val;
+            starBtns.forEach(b => b.classList.toggle('active', parseInt(b.dataset.value) <= val));
+        });
+    });
+}
+
+// Like comment
+async function toggleLike(btn, commentId) {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]');
+    try {
+        await fetch('@Url.Action("LikeComment", "Cinema")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `commentId=${commentId}${token ? '&__RequestVerificationToken=' + encodeURIComponent(token.value) : ''}`
+        });
+        const icon = btn.querySelector('i');
+        const liked = btn.classList.toggle('liked');
+        const count = parseInt(btn.textContent.trim().split(/\s+/).pop()) || 0;
+        btn.innerHTML = `<i class="fas fa-thumbs-up"></i> ${liked ? count + 1 : Math.max(0, count - 1)}`;
+        if (liked) btn.classList.add('liked'); else btn.classList.remove('liked');
+    } catch {}
+}
 </script>
 }

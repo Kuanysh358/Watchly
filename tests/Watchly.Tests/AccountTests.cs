@@ -2,11 +2,15 @@ using Xunit;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Watchly.Web.Controllers;
+using Watchly.Web.Data;
 using Watchly.Web.Models.DataModels;
 using Watchly.Web.Models.ViewModels;
+using Watchly.Web.Services;
+using Microsoft.AspNetCore.Hosting;
 
 namespace Watchly.Tests;
 
@@ -25,12 +29,31 @@ public class AccountTests
         return new Mock<SignInManager<ApplicationUser>>(userManager.Object, contextAccessor.Object, claimsFactory.Object, null!, null!, null!, null!);
     }
 
+    private static ApplicationDbContext BuildDbContext(string name)
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(name)
+            .Options;
+        return new ApplicationDbContext(options);
+    }
+
+    private static AccountController BuildController(
+        Mock<UserManager<ApplicationUser>> userManager,
+        Mock<SignInManager<ApplicationUser>> signInManager,
+        ApplicationDbContext? db = null)
+    {
+        db ??= BuildDbContext(Guid.NewGuid().ToString());
+        var movieService = Mock.Of<IMovieService>();
+        var env = Mock.Of<IWebHostEnvironment>();
+        return new AccountController(userManager.Object, signInManager.Object, db, movieService, env);
+    }
+
     [Fact]
     public void Register_Get_Anonymous_ReturnsView()
     {
         var userManager = BuildUserManagerMock();
         var signInManager = BuildSignInManagerMock(userManager);
-        var controller = new AccountController(userManager.Object, signInManager.Object, Mock.Of<ILogger<AccountController>>());
+        var controller = BuildController(userManager, signInManager);
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
 
         var result = controller.Register();
@@ -44,7 +67,7 @@ public class AccountTests
         var userManager = BuildUserManagerMock();
         var signInManager = BuildSignInManagerMock(userManager);
         signInManager.Setup(x => x.IsSignedIn(It.IsAny<System.Security.Claims.ClaimsPrincipal>())).Returns(true);
-        var controller = new AccountController(userManager.Object, signInManager.Object, Mock.Of<ILogger<AccountController>>());
+        var controller = BuildController(userManager, signInManager);
 
         var result = controller.Register();
 
@@ -56,7 +79,7 @@ public class AccountTests
     {
         var userManager = BuildUserManagerMock();
         var signInManager = BuildSignInManagerMock(userManager);
-        var controller = new AccountController(userManager.Object, signInManager.Object, Mock.Of<ILogger<AccountController>>());
+        var controller = BuildController(userManager, signInManager);
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
 
         var result = controller.Login();
@@ -70,7 +93,7 @@ public class AccountTests
         var userManager = BuildUserManagerMock();
         var signInManager = BuildSignInManagerMock(userManager);
         signInManager.Setup(x => x.IsSignedIn(It.IsAny<System.Security.Claims.ClaimsPrincipal>())).Returns(true);
-        var controller = new AccountController(userManager.Object, signInManager.Object, Mock.Of<ILogger<AccountController>>());
+        var controller = BuildController(userManager, signInManager);
 
         var result = controller.Login();
 
@@ -82,7 +105,7 @@ public class AccountTests
     {
         var userManager = BuildUserManagerMock();
         var signInManager = BuildSignInManagerMock(userManager);
-        var controller = new AccountController(userManager.Object, signInManager.Object, Mock.Of<ILogger<AccountController>>());
+        var controller = BuildController(userManager, signInManager);
 
         var result = await controller.Logout();
 
@@ -95,7 +118,7 @@ public class AccountTests
     {
         var userManager = BuildUserManagerMock();
         var signInManager = BuildSignInManagerMock(userManager);
-        var controller = new AccountController(userManager.Object, signInManager.Object, Mock.Of<ILogger<AccountController>>());
+        var controller = BuildController(userManager, signInManager);
         controller.ModelState.AddModelError("x", "error");
 
         var result = await controller.Register(new RegisterViewModel());
@@ -108,7 +131,7 @@ public class AccountTests
     {
         var userManager = BuildUserManagerMock();
         var signInManager = BuildSignInManagerMock(userManager);
-        var controller = new AccountController(userManager.Object, signInManager.Object, Mock.Of<ILogger<AccountController>>());
+        var controller = BuildController(userManager, signInManager);
         controller.ModelState.AddModelError("x", "error");
 
         var result = await controller.Login(new LoginViewModel());
@@ -121,12 +144,11 @@ public class AccountTests
     {
         var userManager = BuildUserManagerMock();
         userManager.Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>())).ReturnsAsync(IdentityResult.Success);
+        userManager.Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>())).ReturnsAsync(IdentityResult.Success);
         var signInManager = BuildSignInManagerMock(userManager);
 
-        var controller = new AccountController(userManager.Object, signInManager.Object, Mock.Of<ILogger<AccountController>>())
-        {
-            Url = Mock.Of<Microsoft.AspNetCore.Mvc.IUrlHelper>()
-        };
+        var controller = BuildController(userManager, signInManager);;
+        controller.Url = Mock.Of<Microsoft.AspNetCore.Mvc.IUrlHelper>();
 
         var result = await controller.Register(new RegisterViewModel
         {

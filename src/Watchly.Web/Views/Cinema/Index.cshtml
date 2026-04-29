@@ -1,21 +1,161 @@
 @model Watchly.Web.Models.ViewModels.MovieListViewModel
 @{ ViewData["Title"] = "Каталог"; }
-<h2>Каталог фильмов</h2>
-<form method="get" class="filters">
-    <input type="text" name="SearchQuery" value="@Model.Filter.SearchQuery" placeholder="Поиск по названию" />
-    <select name="GenreId"><option value="">Все жанры</option>@foreach (var genre in Model.AvailableGenres){<option value="@genre.Id" selected="@(Model.Filter.GenreId == genre.Id)">@genre.Name</option>}</select>
-    <input type="number" name="YearFrom" value="@Model.Filter.YearFrom" placeholder="Год от" />
-    <input type="number" name="YearTo" value="@Model.Filter.YearTo" placeholder="Год до" />
-    <input type="number" name="RatingFrom" step="0.1" value="@Model.Filter.RatingFrom" placeholder="Рейтинг от" />
-    <select name="SortBy"><option value="newest" selected="@(Model.Filter.SortBy == "newest")">Сначала новые</option><option value="rating" selected="@(Model.Filter.SortBy == "rating")">По рейтингу</option><option value="title" selected="@(Model.Filter.SortBy == "title")">По названию</option></select>
-    <button type="submit" class="btn-primary">Применить</button>
-</form>
-<div class="movie-grid">
-@foreach (var movie in Model.Movies){
-    <article class="movie-card">
-      <img src="@(string.IsNullOrWhiteSpace(movie.PosterUrl) ? "https://via.placeholder.com/250x360?text=No+Poster" : movie.PosterUrl)" alt="@movie.Title" />
-      <h3>@movie.Title (@movie.ReleaseYear)</h3><p>⭐ @movie.Rating</p><p>@string.Join(", ", movie.Genres)</p>
-      <a class="btn-secondary" asp-action="Detail" asp-route-id="@movie.Id">Подробнее</a>
-    </article>
-}
+
+<div class="catalog-header">
+    <h2><i class="fas fa-th-large"></i> Каталог фильмов</h2>
+    <p class="text-muted">@Model.TotalCount фильмов найдено</p>
 </div>
+
+<form method="get" id="filterForm" class="filter-panel">
+    <div class="filter-row">
+        <div class="filter-search">
+            <i class="fas fa-search filter-search-icon"></i>
+            <input type="text" name="SearchQuery" id="liveSearch" value="@Model.Filter.SearchQuery"
+                   placeholder="Поиск по названию..." autocomplete="off" class="filter-input" />
+        </div>
+        <select name="GenreId" class="filter-select">
+            <option value="">Все жанры</option>
+            @foreach (var genre in Model.AvailableGenres)
+            {
+                if (Model.Filter.GenreId == genre.Id)
+                {
+                    <option value="@genre.Id" selected="selected">@genre.Name</option>
+                }
+                else
+                {
+                    <option value="@genre.Id">@genre.Name</option>
+                }
+            }
+        </select>
+        <input type="number" name="YearFrom" value="@Model.Filter.YearFrom" placeholder="Год от" class="filter-input filter-year" />
+        <input type="number" name="YearTo" value="@Model.Filter.YearTo" placeholder="Год до" class="filter-input filter-year" />
+        <input type="number" name="RatingFrom" step="0.1" min="0" max="10" value="@Model.Filter.RatingFrom" placeholder="Рейтинг от" class="filter-input filter-rating" />
+        <select name="SortBy" class="filter-select">
+            @{
+                var sorts = new[] {
+                    ("newest", "Сначала новые"),
+                    ("rating", "По рейтингу"),
+                    ("title", "По названию")
+                };
+                foreach (var (val, label) in sorts)
+                {
+                    if (Model.Filter.SortBy == val)
+                    {
+                        <option value="@val" selected="selected">@label</option>
+                    }
+                    else
+                    {
+                        <option value="@val">@label</option>
+                    }
+                }
+            }
+        </select>
+        <button type="submit" class="btn-primary"><i class="fas fa-filter"></i> Применить</button>
+        <a href="@Url.Action("Index", "Cinema")" class="btn-secondary"><i class="fas fa-times"></i> Сбросить</a>
+    </div>
+</form>
+
+<div class="movie-grid" id="movieGrid">
+    @foreach (var movie in Model.Movies)
+    {
+        <article class="movie-card">
+            <a asp-action="Detail" asp-route-id="@movie.Id" class="movie-card-link">
+                <img src="@(string.IsNullOrWhiteSpace(movie.PosterUrl) ? "https://via.placeholder.com/250x360?text=No+Poster" : movie.PosterUrl)" alt="@movie.Title" />
+                <div class="movie-card-info">
+                    <h3 class="movie-card-title">@movie.Title</h3>
+                    <div class="movie-card-meta">
+                        <span class="movie-year">@movie.ReleaseYear</span>
+                        <span class="movie-rating"><i class="fas fa-star"></i> @movie.Rating</span>
+                    </div>
+                    <p class="movie-genres">@string.Join(", ", movie.Genres)</p>
+                </div>
+            </a>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <form asp-action="ToggleWatchlist" method="post" class="card-watchlist-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="movieId" value="@movie.Id" />
+                    <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                    <button type="submit" class="btn-watchlist @(movie.IsInWatchlist ? "in-watchlist" : "")" title="@(movie.IsInWatchlist ? "Убрать из избранного" : "В избранное")">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                </form>
+            }
+        </article>
+    }
+</div>
+
+@if (!Model.Movies.Any())
+{
+    <div class="empty-state">
+        <i class="fas fa-film fa-3x mb-3"></i>
+        <p>Фильмы не найдены. Попробуйте изменить фильтры.</p>
+    </div>
+}
+
+@if (Model.TotalPages > 1)
+{
+    <nav class="pagination-wrap" aria-label="Страницы">
+        <ul class="pagination">
+            @if (Model.CurrentPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" asp-action="Index"
+                       asp-route-SearchQuery="@Model.Filter.SearchQuery"
+                       asp-route-GenreId="@Model.Filter.GenreId"
+                       asp-route-YearFrom="@Model.Filter.YearFrom"
+                       asp-route-YearTo="@Model.Filter.YearTo"
+                       asp-route-RatingFrom="@Model.Filter.RatingFrom"
+                       asp-route-SortBy="@Model.Filter.SortBy"
+                       asp-route-PageNumber="@(Model.CurrentPage - 1)">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+            }
+            @for (int p = Math.Max(1, Model.CurrentPage - 2); p <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); p++)
+            {
+                <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                    <a class="page-link" asp-action="Index"
+                       asp-route-SearchQuery="@Model.Filter.SearchQuery"
+                       asp-route-GenreId="@Model.Filter.GenreId"
+                       asp-route-YearFrom="@Model.Filter.YearFrom"
+                       asp-route-YearTo="@Model.Filter.YearTo"
+                       asp-route-RatingFrom="@Model.Filter.RatingFrom"
+                       asp-route-SortBy="@Model.Filter.SortBy"
+                       asp-route-PageNumber="@p">@p</a>
+                </li>
+            }
+            @if (Model.CurrentPage < Model.TotalPages)
+            {
+                <li class="page-item">
+                    <a class="page-link" asp-action="Index"
+                       asp-route-SearchQuery="@Model.Filter.SearchQuery"
+                       asp-route-GenreId="@Model.Filter.GenreId"
+                       asp-route-YearFrom="@Model.Filter.YearFrom"
+                       asp-route-YearTo="@Model.Filter.YearTo"
+                       asp-route-RatingFrom="@Model.Filter.RatingFrom"
+                       asp-route-SortBy="@Model.Filter.SortBy"
+                       asp-route-PageNumber="@(Model.CurrentPage + 1)">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            }
+        </ul>
+    </nav>
+}
+
+@section Scripts {
+<script>
+// Live search with debounce
+let searchTimer = null;
+const searchInput = document.getElementById('liveSearch');
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            document.getElementById('filterForm').submit();
+        }, 400);
+    });
+}
+</script>
+}

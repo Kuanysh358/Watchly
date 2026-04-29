@@ -133,7 +133,7 @@ public class MovieCrudTests
         var service = new MovieService(repo, ctx);
         var id = await service.CreateMovieAsync(new MovieCreateEditViewModel { Title = "Before", ReleaseYear = 2020, Rating = 8 });
         await service.UpdateMovieAsync(new MovieCreateEditViewModel { Id = id, Title = "After", ReleaseYear = 2020, Rating = 8 });
-        var updated = await repo.GetByIdAsync(id);
+        var updated = await repo.GetByIdAsync(id!.Value);
         Assert.Equal("After", updated!.Title);
     }
 
@@ -144,8 +144,8 @@ public class MovieCrudTests
         var repo = new MovieRepository(ctx);
         var service = new MovieService(repo, ctx);
         var id = await service.CreateMovieAsync(new MovieCreateEditViewModel { Title = "Del", ReleaseYear = 2020, Rating = 8 });
-        await service.DeleteMovieAsync(id);
-        Assert.False(await repo.ExistsAsync(id));
+        await service.DeleteMovieAsync(id!.Value);
+        Assert.False(await repo.ExistsAsync(id.Value));
     }
 
     [Fact]

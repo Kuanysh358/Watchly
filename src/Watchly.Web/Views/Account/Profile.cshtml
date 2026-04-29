@@ -1,26 +1,162 @@
 @model Watchly.Web.Models.ViewModels.ProfileEditViewModel
 @{ ViewData["Title"] = "Профиль"; }
 
-<div class="form-card">
-    <h2>Профиль пользователя</h2>
-    <form method="post">
-        @Html.AntiForgeryToken()
-        <label>Имя</label>
-        <input asp-for="FullName" />
-        <label>Email</label>
-        <input asp-for="Email" type="email" />
-        <label>Аватар (URL)</label>
-        <input asp-for="AvatarUrl" placeholder="https://..." />
-        <label>Текущий пароль</label>
-        <input asp-for="CurrentPassword" type="password" />
-        <label>Новый пароль</label>
-        <input asp-for="NewPassword" type="password" />
-        <button class="btn-primary" type="submit">Сохранить</button>
-    </form>
+<div class="profile-layout">
+    <!-- Левая колонка: форма редактирования -->
+    <div class="profile-edit-col">
+        <div class="form-card">
+            <div class="profile-avatar-wrap">
+                @if (!string.IsNullOrWhiteSpace(Model.AvatarUrl))
+                {
+                    <img src="@Model.AvatarUrl" alt="Аватар" class="profile-avatar-img" />
+                }
+                else
+                {
+                    <div class="profile-avatar-placeholder"><i class="fas fa-user-circle fa-4x"></i></div>
+                }
+            </div>
+            <h2 class="text-center mb-4">@(string.IsNullOrWhiteSpace(Model.FullName) ? "Профиль" : Model.FullName)</h2>
 
-    <hr />
-    <h4>Статистика</h4>
-    <p>Просмотрено фильмов: <strong>@Model.TotalViewedMovies</strong></p>
-    <p>Просмотрено часов: <strong>@Model.TotalWatchedHours.ToString("0.0")</strong></p>
-    <p>Частые жанры: <strong>@string.Join(", ", Model.TopGenres)</strong></p>
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-error">
+                    <ul class="mb-0">
+                        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                        {
+                            <li>@error.ErrorMessage</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <form method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label class="form-label">Имя</label>
+                    <input asp-for="FullName" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input asp-for="Email" type="email" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Аватар (загрузить файл)</label>
+                    <input asp-for="AvatarFile" type="file" accept="image/*" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Аватар (URL)</label>
+                    <input asp-for="AvatarUrl" placeholder="https://..." class="form-control" />
+                </div>
+                <hr class="my-3" />
+                <div class="mb-3">
+                    <label class="form-label">Текущий пароль</label>
+                    <input asp-for="CurrentPassword" type="password" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Новый пароль</label>
+                    <input asp-for="NewPassword" type="password" class="form-control" />
+                </div>
+                <button class="btn-primary w-100" type="submit"><i class="fas fa-save"></i> Сохранить</button>
+            </form>
+        </div>
+
+        <!-- Статистика -->
+        <div class="form-card mt-3">
+            <h4><i class="fas fa-chart-bar"></i> Статистика</h4>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-value">@Model.TotalViewedMovies</span>
+                    <span class="stat-label">Просмотрено фильмов</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">@Model.TotalWatchedHours.ToString("0.0")</span>
+                    <span class="stat-label">Часов просмотра</span>
+                </div>
+            </div>
+            @if (Model.TopGenres.Any())
+            {
+                <p class="mt-2"><strong>Любимые жанры:</strong> @string.Join(", ", Model.TopGenres)</p>
+            }
+        </div>
+    </div>
+
+    <!-- Правая колонка: история и избранное -->
+    <div class="profile-info-col">
+        @if (Model.ResumeItems.Any())
+        {
+            <div class="profile-section">
+                <h4><i class="fas fa-play-circle"></i> Продолжить просмотр</h4>
+                <div class="resume-list">
+                    @foreach (var item in Model.ResumeItems)
+                    {
+                        <div class="resume-item">
+                            @if (!string.IsNullOrWhiteSpace(item.PosterUrl))
+                            {
+                                <img src="@item.PosterUrl" alt="@item.Title" class="resume-poster" />
+                            }
+                            <div class="resume-info">
+                                <span class="resume-title">@item.Title</span>
+                                <span class="resume-pos text-muted">с @item.ResumeLabel</span>
+                                <a asp-controller="Cinema" asp-action="Detail" asp-route-id="@item.MovieId" class="btn-secondary btn-sm">
+                                    <i class="fas fa-play"></i> Смотреть
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (Model.ViewHistoryItems.Any())
+        {
+            <div class="profile-section">
+                <h4><i class="fas fa-history"></i> История просмотров</h4>
+                <div class="history-list">
+                    @foreach (var item in Model.ViewHistoryItems)
+                    {
+                        <div class="history-item">
+                            @if (!string.IsNullOrWhiteSpace(item.PosterUrl))
+                            {
+                                <img src="@item.PosterUrl" alt="@item.Title" class="history-poster" />
+                            }
+                            <div class="history-info">
+                                <a asp-controller="Cinema" asp-action="Detail" asp-route-id="@item.MovieId" class="history-title">@item.Title</a>
+                                <span class="text-muted small">@item.LastViewedAt.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                                <span class="text-muted small">Просмотров: @item.ViewCount</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <a asp-controller="Cinema" asp-action="ViewHistory" class="btn-secondary btn-sm mt-2">
+                    <i class="fas fa-list"></i> Вся история
+                </a>
+            </div>
+        }
+
+        @if (Model.WatchlistItems.Any())
+        {
+            <div class="profile-section">
+                <h4><i class="fas fa-heart"></i> Избранное</h4>
+                <div class="history-list">
+                    @foreach (var item in Model.WatchlistItems.Take(5))
+                    {
+                        <div class="history-item">
+                            @if (!string.IsNullOrWhiteSpace(item.PosterUrl))
+                            {
+                                <img src="@item.PosterUrl" alt="@item.Title" class="history-poster" />
+                            }
+                            <div class="history-info">
+                                <a asp-controller="Cinema" asp-action="Detail" asp-route-id="@item.Id" class="history-title">@item.Title</a>
+                                <span class="text-muted small">@item.ReleaseYear</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <a asp-controller="Cinema" asp-action="Watchlist" class="btn-secondary btn-sm mt-2">
+                    <i class="fas fa-heart"></i> Всё избранное
+                </a>
+            </div>
+        }
+    </div>
 </div>
