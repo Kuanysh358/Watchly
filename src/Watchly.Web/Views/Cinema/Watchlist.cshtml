@@ -20,7 +20,7 @@ else
     <div class="movie-grid">
         @foreach (var movie in Model)
         {
-            <article class="movie-card">
+            <article class="movie-card movie-card-rich">
                 <a asp-action="Detail" asp-route-id="@movie.Id" class="movie-card-link">
                     <img src="@(string.IsNullOrWhiteSpace(movie.PosterUrl) ? "https://via.placeholder.com/250x360?text=No+Poster" : movie.PosterUrl)" alt="@movie.Title" />
                     <div class="movie-card-info">
