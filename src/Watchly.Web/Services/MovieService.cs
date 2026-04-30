@@ -131,7 +131,9 @@ namespace Watchly.Web.Services
 
         public async Task<int?> CreateMovieAsync(MovieCreateEditViewModel model)
         {
-            var duplicate = await _context.Movies.FirstOrDefaultAsync(m => (model.TmdbId.HasValue && m.TmdbId == model.TmdbId) || m.Title.ToLower() == model.Title.ToLower());
+            var duplicate = model.TmdbId.HasValue
+                ? await _context.Movies.FirstOrDefaultAsync(m => m.TmdbId == model.TmdbId)
+                : await _context.Movies.FirstOrDefaultAsync(m => m.Title.ToLower() == model.Title.ToLower() && m.ReleaseYear == model.ReleaseYear);
             if (duplicate != null) return null;
 
             var movie = new Movie

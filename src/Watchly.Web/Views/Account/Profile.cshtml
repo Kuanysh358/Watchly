@@ -5,7 +5,7 @@
     <!-- Левая колонка: форма редактирования -->
     <div class="profile-edit-col">
         <div class="form-card">
-            <div class="profile-avatar-wrap">
+            <div class="profile-avatar-wrap" id="avatarTrigger" role="button" title="Изменить аватар">
                 @if (!string.IsNullOrWhiteSpace(Model.AvatarUrl))
                 {
                     <img src="@Model.AvatarUrl" alt="Аватар" class="profile-avatar-img" />
@@ -42,7 +42,9 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Аватар (загрузить файл)</label>
-                    <input asp-for="AvatarFile" type="file" accept="image/*" class="form-control" />
+                    <input asp-for="AvatarFile" id="avatarFileInput" type="file" accept="image/*" class="form-control d-none" />
+                    <button type="button" class="btn-secondary mt-2" id="changeAvatarBtn"><i class="fas fa-image"></i> Изменить аватар</button>
+                    <small class="text-muted d-block mt-1" id="avatarFileName"></small>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Аватар (URL)</label>
@@ -160,3 +162,21 @@
         }
     </div>
 </div>
+
+
+@section Scripts {
+    <script>
+        const avatarBtn = document.getElementById('changeAvatarBtn');
+        const avatarWrap = document.getElementById('avatarTrigger');
+        const avatarInput = document.getElementById('avatarFileInput');
+        const avatarFileName = document.getElementById('avatarFileName');
+
+        function openAvatarPicker() { if (avatarInput) avatarInput.click(); }
+
+        avatarBtn?.addEventListener('click', openAvatarPicker);
+        avatarWrap?.addEventListener('click', openAvatarPicker);
+        avatarInput?.addEventListener('change', function () {
+            avatarFileName.textContent = this.files && this.files.length > 0 ? `Выбран файл: ${this.files[0].name}` : "";
+        });
+    </script>
+}

@@ -1,6 +1,8 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Localization;
+using System.Globalization;
 using Watchly.Web.Data;
 using Watchly.Web.Models.DataModels;
 using Watchly.Web.Models.ViewModels;
@@ -36,6 +38,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 // MVC
+builder.Services.AddLocalization();
 builder.Services.AddControllersWithViews();
 
 // Repositories
@@ -63,6 +66,14 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+var supportedCultures = new[] { new CultureInfo("ru-RU"), new CultureInfo("kk-KZ") };
+app.UseRequestLocalization(new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture("ru-RU"),
+    SupportedCultures = supportedCultures,
+    SupportedUICultures = supportedCultures
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 
