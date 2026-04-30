@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Localization;
 using System.Security.Claims;
 using Watchly.Web.Models.ViewModels;
 using Watchly.Web.Services;
@@ -24,8 +25,12 @@ namespace Watchly.Web.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult SetLanguage(string lang, string? returnUrl)
         {
-            var selected = lang == "kz" ? "kz" : "ru";
-            Response.Cookies.Append("watchly_lang", selected, new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1) });
+            var selectedCulture = lang == "kz" ? "kk-KZ" : "ru-RU";
+            Response.Cookies.Append(
+                CookieRequestCultureProvider.DefaultCookieName,
+                CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(selectedCulture)),
+                new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1) }
+            );
             return Redirect(string.IsNullOrWhiteSpace(returnUrl) ? Url.Action("Index")! : returnUrl);
         }
 
