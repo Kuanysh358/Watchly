@@ -66,9 +66,9 @@
 
 @if (User.Identity?.IsAuthenticated == true)
 {
-    <section class="mb-4">
+    <section class="mb-4 detail-panel">
         <h3 class="section-title"><i class="fas fa-star-half-alt"></i> Ваша оценка</h3>
-        <form asp-action="SetRating" method="post" class="rating-form">
+        <form asp-action="SetRating" method="post" class="rating-form modern-form">
             @Html.AntiForgeryToken()
             <input type="hidden" name="movieId" value="@Model.Id" />
             <div class="rating-stars" id="ratingStars">
@@ -78,12 +78,12 @@
                 }
             </div>
             <input type="hidden" name="score" id="ratingScore" value="@(Model.UserRating == 0 ? 8 : Model.UserRating)" />
-            <button class="btn-primary mt-2" type="submit"><i class="fas fa-check"></i> Сохранить оценку</button>
+            <button class="btn-primary mt-2 action-wide" type="submit"><i class="fas fa-check"></i> Сохранить оценку</button>
         </form>
     </section>
 
-    <section class="mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+    <section class="mb-4 detail-panel">
+        <div class="d-flex justify-content-between align-items-center mb-3 comments-head">
             <h3 class="section-title mb-0"><i class="fas fa-comments"></i> Комментарии (@Model.Comments.Count)</h3>
             <div class="comment-sort">
                 <a asp-action="Detail" asp-route-id="@Model.Id" asp-route-commentSort="newest"
@@ -96,11 +96,11 @@
                 </a>
             </div>
         </div>
-        <form asp-action="AddComment" method="post" class="mb-4">
+        <form asp-action="AddComment" method="post" class="mb-4 modern-form">
             @Html.AntiForgeryToken()
             <input type="hidden" name="movieId" value="@Model.Id" />
             <textarea name="text" class="form-control comment-input" rows="3" required placeholder="Ваш отзыв о фильме..."></textarea>
-            <button class="btn-primary mt-2" type="submit"><i class="fas fa-paper-plane"></i> Оставить отзыв</button>
+            <button class="btn-primary mt-2 action-wide" type="submit"><i class="fas fa-paper-plane"></i> Оставить комментарий</button>
         </form>
 
         <div class="comments-list">
