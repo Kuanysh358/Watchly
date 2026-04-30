@@ -5,7 +5,7 @@ namespace Watchly.Web.Services
     public interface IMovieService
     {
         Task<MovieListViewModel> GetMoviesAsync(MovieFilterViewModel filter, string? userId);
-        Task<MovieDetailViewModel?> GetMovieDetailAsync(int id, string? userId);
+        Task<MovieDetailViewModel?> GetMovieDetailAsync(int id, string? userId, string? commentSort = "newest");
         Task<MovieCreateEditViewModel> GetCreateEditViewModelAsync(int? id = null);
         Task<int?> CreateMovieAsync(MovieCreateEditViewModel model);
         Task UpdateMovieAsync(MovieCreateEditViewModel model);
@@ -17,6 +17,9 @@ namespace Watchly.Web.Services
         Task<IEnumerable<MovieCardViewModel>> GetViewHistoryAsync(string userId);
         Task<HomeIndexViewModel> GetHomeDataAsync(string? userId);
         Task AddCommentAsync(int movieId, string userId, string text);
+        Task DeleteCommentAsync(int commentId);
+        Task ToggleCommentLikeAsync(int commentId, string userId);
         Task SetRatingAsync(int movieId, string userId, int score);
+        Task<ProfileEditViewModel> GetProfileDataAsync(string userId);
     }
 }

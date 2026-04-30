@@ -21,12 +21,13 @@ namespace Watchly.Web.Controllers
             return View(await _movieService.GetMoviesAsync(filter, userId));
         }
 
-        public async Task<IActionResult> Detail(int id)
+        public async Task<IActionResult> Detail(int id, string? commentSort = "newest")
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var movie = await _movieService.GetMovieDetailAsync(id, userId);
+            var movie = await _movieService.GetMovieDetailAsync(id, userId, commentSort);
             if (movie == null) return NotFound();
             if (userId != null) await _movieService.RecordViewAsync(id, userId);
+            ViewBag.CommentSort = commentSort ?? "newest";
             return View(movie);
         }
 
@@ -36,6 +37,20 @@ namespace Watchly.Web.Controllers
             if (!string.IsNullOrWhiteSpace(text))
                 await _movieService.AddCommentAsync(movieId, User.FindFirstValue(ClaimTypes.NameIdentifier)!, text);
             return RedirectToAction(nameof(Detail), new { id = movieId });
+        }
+
+        [Authorize(Roles = "Admin"), HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteComment(int commentId, int movieId)
+        {
+            await _movieService.DeleteCommentAsync(commentId);
+            return RedirectToAction(nameof(Detail), new { id = movieId });
+        }
+
+        [Authorize, HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> LikeComment(int commentId)
+        {
+            await _movieService.ToggleCommentLikeAsync(commentId, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            return Ok();
         }
 
         [Authorize, HttpPost, ValidateAntiForgeryToken]

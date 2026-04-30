@@ -12,7 +12,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = true;
@@ -72,7 +71,6 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 // Auto migrate and seed
-// Auto migrate and seed
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -84,13 +82,11 @@ using (var scope = app.Services.CreateScope())
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
 
-        // Создать роли
         if (!await roleManager.RoleExistsAsync("Admin"))
             await roleManager.CreateAsync(new IdentityRole("Admin"));
         if (!await roleManager.RoleExistsAsync("User"))
             await roleManager.CreateAsync(new IdentityRole("User"));
 
-        // Создать администратора
         var adminEmail = "admin@watchly.com";
         var admin = await userManager.FindByEmailAsync(adminEmail);
         if (admin == null)
@@ -116,9 +112,5 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "An error occurred while migrating the database");
     }
 }
-
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();

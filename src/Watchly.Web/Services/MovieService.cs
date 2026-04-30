@@ -27,7 +27,7 @@ namespace Watchly.Web.Services
             var genres = await _movieRepository.GetAllGenresAsync();
             return new MovieListViewModel
             {
-                Movies = movies.Select(MapCard).Select(c => { c.IsInWatchlist = watchlistIds.Contains(c.Id); return c; }).ToList(),
+                Movies = movies.Select(m => MapCard(m)).Select(c => { c.IsInWatchlist = watchlistIds.Contains(c.Id); return c; }).ToList(),
                 Filter = filter,
                 TotalCount = totalCount,
                 AvailableGenres = genres.Select(g => new GenreDisplayViewModel { Id = g.Id, Name = g.Name }).ToList()
@@ -39,8 +39,8 @@ namespace Watchly.Web.Services
             var all = await _movieRepository.GetAllAsync();
             return new HomeIndexViewModel
             {
-                Popular = all.OrderByDescending(m => m.Rating).Take(8).Select(MapCard).ToList(),
-                NewReleases = all.OrderByDescending(m => m.ReleaseYear).ThenByDescending(m => m.CreatedAt).Take(8).Select(MapCard).ToList(),
+                Popular = all.OrderByDescending(m => m.Rating).Take(8).Select(m => MapCard(m)).ToList(),
+                NewReleases = all.OrderByDescending(m => m.ReleaseYear).ThenByDescending(m => m.CreatedAt).Take(8).Select(m => MapCard(m)).ToList(),
                 ByGenres = all.SelectMany(m => m.MovieGenres.Select(g => new { m, g.Genre.Name }))
                     .GroupBy(x => x.Name)
                     .OrderByDescending(g => g.Count())
@@ -49,10 +49,30 @@ namespace Watchly.Web.Services
             };
         }
 
-        public async Task<MovieDetailViewModel?> GetMovieDetailAsync(int id, string? userId)
+        public async Task<MovieDetailViewModel?> GetMovieDetailAsync(int id, string? userId, string? commentSort = "newest")
         {
             var movie = await _movieRepository.GetByIdAsync(id);
             if (movie == null) return null;
+
+            var commentsQuery = _context.MovieComments
+                .Where(c => c.MovieId == id)
+                .Include(c => c.User)
+                .Include(c => c.Likes);
+
+            IQueryable<MovieComment> orderedComments = commentSort == "popular"
+                ? commentsQuery.OrderByDescending(c => c.Likes.Count)
+                : commentsQuery.OrderByDescending(c => c.CreatedAt);
+
+            var commentList = await orderedComments.Select(c => new CommentViewModel
+            {
+                Id = c.Id,
+                UserId = c.UserId,
+                UserName = c.User.FullName ?? c.User.UserName ?? "User",
+                Text = c.Text,
+                CreatedAt = c.CreatedAt,
+                LikeCount = c.Likes.Count,
+                LikedByCurrentUser = userId != null && c.Likes.Any(l => l.UserId == userId)
+            }).ToListAsync();
 
             var vm = new MovieDetailViewModel
             {
@@ -68,12 +88,7 @@ namespace Watchly.Web.Services
                 Country = movie.Country,
                 Director = movie.Director,
                 Genres = movie.MovieGenres.Select(mg => mg.Genre.Name).ToList(),
-                Comments = await _context.MovieComments.Where(c => c.MovieId == id).OrderByDescending(c => c.CreatedAt).Select(c => new CommentViewModel
-                {
-                    UserName = c.User.FullName ?? c.User.UserName ?? "User",
-                    Text = c.Text,
-                    CreatedAt = c.CreatedAt
-                }).ToListAsync()
+                Comments = commentList
             };
 
             if (userId != null)
@@ -193,6 +208,77 @@ namespace Watchly.Web.Services
         {
             _context.MovieComments.Add(new MovieComment { MovieId = movieId, UserId = userId, Text = text.Trim() });
             await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteCommentAsync(int commentId)
+        {
+            var comment = await _context.MovieComments.FindAsync(commentId);
+            if (comment != null)
+            {
+                _context.MovieComments.Remove(comment);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task ToggleCommentLikeAsync(int commentId, string userId)
+        {
+            var existing = await _context.CommentLikes.FirstOrDefaultAsync(l => l.CommentId == commentId && l.UserId == userId);
+            if (existing != null) _context.CommentLikes.Remove(existing);
+            else _context.CommentLikes.Add(new CommentLike { CommentId = commentId, UserId = userId });
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<ProfileEditViewModel> GetProfileDataAsync(string userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            var history = await _context.ViewHistories
+                .Where(v => v.UserId == userId)
+                .Include(v => v.Movie).ThenInclude(m => m.MovieGenres).ThenInclude(g => g.Genre)
+                .OrderByDescending(v => v.LastViewedAt)
+                .ToListAsync();
+
+            var topGenres = history
+                .SelectMany(v => v.Movie.MovieGenres.Select(g => g.Genre.Name))
+                .GroupBy(x => x).OrderByDescending(g => g.Count()).Take(5)
+                .Select(g => g.Key).ToList();
+
+            var watchlistItems = await _context.Watchlists
+                .Where(w => w.UserId == userId)
+                .Include(w => w.Movie).ThenInclude(m => m.MovieGenres).ThenInclude(mg => mg.Genre)
+                .OrderByDescending(w => w.AddedAt)
+                .Select(w => MapCard(w.Movie, true))
+                .ToListAsync();
+
+            var resumeItems = history
+                .Where(h => h.LastPositionSeconds > 0)
+                .Take(5)
+                .Select(h => new ResumeItemViewModel
+                {
+                    MovieId = h.MovieId,
+                    Title = h.Movie.Title,
+                    PosterUrl = h.Movie.PosterUrl,
+                    LastPositionSeconds = h.LastPositionSeconds
+                }).ToList();
+
+            return new ProfileEditViewModel
+            {
+                FullName = user?.FullName ?? user?.UserName ?? string.Empty,
+                Email = user?.Email ?? string.Empty,
+                AvatarUrl = user?.AvatarUrl,
+                TotalViewedMovies = history.Select(h => h.MovieId).Distinct().Count(),
+                TotalWatchedHours = history.Sum(h => h.WatchedMinutesTotal) / 60.0,
+                TopGenres = topGenres,
+                ViewHistoryItems = history.Take(10).Select(h => new ViewHistoryItemViewModel
+                {
+                    MovieId = h.MovieId,
+                    Title = h.Movie.Title,
+                    PosterUrl = h.Movie.PosterUrl,
+                    LastViewedAt = h.LastViewedAt,
+                    ViewCount = h.ViewCount
+                }).ToList(),
+                WatchlistItems = watchlistItems,
+                ResumeItems = resumeItems
+            };
         }
 
         public async Task SetRatingAsync(int movieId, string userId, int score)

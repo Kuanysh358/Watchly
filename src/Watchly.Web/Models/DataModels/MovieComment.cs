@@ -16,5 +16,6 @@ namespace Watchly.Web.Models.DataModels
 
         public virtual Movie Movie { get; set; } = null!;
         public virtual ApplicationUser User { get; set; } = null!;
+        public virtual ICollection<CommentLike> Likes { get; set; } = new List<CommentLike>();
     }
 }

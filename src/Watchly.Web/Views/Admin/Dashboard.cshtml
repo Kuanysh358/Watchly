@@ -8,8 +8,8 @@
             <p class="admin-subtitle mb-0">Управление каталогом в неоновом стиле</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
-            <a class="btn-primary" asp-action="Create">➕ Ручное добавление фильма</a>
-            <button id="autoImportButton" type="button" class="btn-secondary">🎬 Автоматический импорт TMDB</button>
+            <a class="btn-primary" asp-action="Create"><i class="fas fa-plus"></i> Ручное добавление фильма</a>
+            <button id="autoImportButton" type="button" class="btn-secondary"><i class="fas fa-cloud-download-alt"></i> Авто-импорт TMDB</button>
         </div>
     </div>
 
@@ -96,7 +96,7 @@
             moviesBox.innerHTML = movies.map(movie => `
                 <article class="auto-import-card">
                     <h6>${movie.title || 'Без названия'}</h6>
-                    <p>${movie.releaseYear || '—'} • ⭐ ${Number(movie.rating || 0).toFixed(1)}</p>
+                    <p>${movie.releaseYear || '—'} • ${Number(movie.rating || 0).toFixed(1)}</p>
                     ${movie.trailerUrl ? `<a href="${movie.trailerUrl}" target="_blank" rel="noopener">Открыть трейлер</a>` : '<span>Трейлер не найден</span>'}
                 </article>
             `).join('');

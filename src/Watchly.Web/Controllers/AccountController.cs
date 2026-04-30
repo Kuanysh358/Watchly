@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Watchly.Web.Data;
 using Watchly.Web.Models.DataModels;
 using Watchly.Web.Models.ViewModels;
+using Watchly.Web.Services;
 
 namespace Watchly.Web.Controllers
 {
@@ -13,12 +14,16 @@ namespace Watchly.Web.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ApplicationDbContext _db;
+        private readonly IMovieService _movieService;
+        private readonly IWebHostEnvironment _env;
 
-        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDbContext db)
+        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDbContext db, IMovieService movieService, IWebHostEnvironment env)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _db = db;
+            _movieService = movieService;
+            _env = env;
         }
 
         [HttpGet]
@@ -49,6 +54,7 @@ namespace Watchly.Web.Controllers
                 return View(model);
             }
 
+            await _userManager.AddToRoleAsync(user, "User");
             await _signInManager.SignInAsync(user, false);
             return RedirectToLocal(returnUrl);
         }
@@ -90,19 +96,8 @@ namespace Watchly.Web.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToAction(nameof(Login));
-
-            var history = await _db.ViewHistories.Where(v => v.UserId == user.Id).Include(v => v.Movie).ThenInclude(m => m.MovieGenres).ThenInclude(g => g.Genre).ToListAsync();
-            var topGenres = history.SelectMany(v => v.Movie.MovieGenres.Select(g => g.Genre.Name)).GroupBy(x => x).OrderByDescending(g => g.Count()).Take(5).Select(g => g.Key).ToList();
-
-            return View(new ProfileEditViewModel
-            {
-                FullName = user.FullName ?? user.UserName ?? string.Empty,
-                Email = user.Email ?? string.Empty,
-                AvatarUrl = user.AvatarUrl,
-                TotalViewedMovies = history.Select(h => h.MovieId).Distinct().Count(),
-                TotalWatchedHours = history.Sum(h => h.WatchedMinutesTotal) / 60.0,
-                TopGenres = topGenres
-            });
+            var vm = await _movieService.GetProfileDataAsync(user.Id);
+            return View(vm);
         }
 
         [Authorize]
@@ -111,17 +106,65 @@ namespace Watchly.Web.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToAction(nameof(Login));
-            if (!ModelState.IsValid) return View(model);
+
+            // Remove AvatarFile from model state validation since it's optional
+            ModelState.Remove(nameof(model.AvatarFile));
+            ModelState.Remove(nameof(model.AvatarUrl));
+            if (!ModelState.IsValid)
+            {
+                var freshVm = await _movieService.GetProfileDataAsync(user.Id);
+                freshVm.FullName = model.FullName;
+                freshVm.Email = model.Email;
+                return View(freshVm);
+            }
 
             user.FullName = model.FullName;
-            user.Email = model.Email;
-            user.UserName = model.Email;
-            user.AvatarUrl = model.AvatarUrl;
+
+            // Update email only if changed
+            if (!string.Equals(user.Email, model.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                var setEmailResult = await _userManager.SetEmailAsync(user, model.Email);
+                if (!setEmailResult.Succeeded)
+                {
+                    foreach (var e in setEmailResult.Errors) ModelState.AddModelError(string.Empty, e.Description);
+                    var freshVm = await _movieService.GetProfileDataAsync(user.Id);
+                    freshVm.FullName = model.FullName;
+                    freshVm.Email = model.Email;
+                    return View(freshVm);
+                }
+            }
+
+            // Handle avatar file upload
+            if (model.AvatarFile != null && model.AvatarFile.Length > 0)
+            {
+                var allowedTypes = new[] { "image/jpeg", "image/png", "image/gif", "image/webp" };
+                if (!allowedTypes.Contains(model.AvatarFile.ContentType.ToLower()))
+                {
+                    ModelState.AddModelError(nameof(model.AvatarFile), "Допустимы только изображения (jpg, png, gif, webp)");
+                    var freshVm = await _movieService.GetProfileDataAsync(user.Id);
+                    return View(freshVm);
+                }
+
+                var uploadsDir = Path.Combine(_env.WebRootPath, "uploads", "avatars");
+                Directory.CreateDirectory(uploadsDir);
+                var ext = Path.GetExtension(model.AvatarFile.FileName);
+                var fileName = $"{user.Id}{ext}";
+                var filePath = Path.Combine(uploadsDir, fileName);
+                using var stream = new FileStream(filePath, FileMode.Create);
+                await model.AvatarFile.CopyToAsync(stream);
+                user.AvatarUrl = $"/uploads/avatars/{fileName}";
+            }
+            else if (!string.IsNullOrWhiteSpace(model.AvatarUrl))
+            {
+                user.AvatarUrl = model.AvatarUrl;
+            }
+
             var updateResult = await _userManager.UpdateAsync(user);
             if (!updateResult.Succeeded)
             {
                 foreach (var e in updateResult.Errors) ModelState.AddModelError(string.Empty, e.Description);
-                return View(model);
+                var freshVm = await _movieService.GetProfileDataAsync(user.Id);
+                return View(freshVm);
             }
 
             if (!string.IsNullOrWhiteSpace(model.NewPassword))
@@ -129,15 +172,19 @@ namespace Watchly.Web.Controllers
                 if (string.IsNullOrWhiteSpace(model.CurrentPassword))
                 {
                     ModelState.AddModelError(string.Empty, "Укажите текущий пароль");
-                    return View(model);
+                    var freshVm = await _movieService.GetProfileDataAsync(user.Id);
+                    return View(freshVm);
                 }
 
                 var passwordResult = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
                 if (!passwordResult.Succeeded)
                 {
                     foreach (var e in passwordResult.Errors) ModelState.AddModelError(string.Empty, e.Description);
-                    return View(model);
+                    var freshVm = await _movieService.GetProfileDataAsync(user.Id);
+                    return View(freshVm);
                 }
+
+                await _signInManager.RefreshSignInAsync(user);
             }
 
             TempData["SuccessMessage"] = "Профиль обновлён";
@@ -151,22 +198,28 @@ namespace Watchly.Web.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToAction(nameof(Login));
 
-            user.Email = email;
-            user.UserName = email;
-            var update = await _userManager.UpdateAsync(user);
-            if (!update.Succeeded)
+            if (!string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
             {
-                TempData["ErrorMessage"] = string.Join("; ", update.Errors.Select(e => e.Description));
-                return RedirectToAction("Dashboard", "Admin");
+                var setEmail = await _userManager.SetEmailAsync(user, email);
+                if (!setEmail.Succeeded)
+                {
+                    TempData["ErrorMessage"] = string.Join("; ", setEmail.Errors.Select(e => e.Description));
+                    return RedirectToAction("Dashboard", "Admin");
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(newPassword) && !string.IsNullOrWhiteSpace(currentPassword))
             {
                 var pass = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
-                if (!pass.Succeeded) TempData["ErrorMessage"] = string.Join("; ", pass.Errors.Select(e => e.Description));
-                else TempData["SuccessMessage"] = "Учетные данные администратора обновлены";
+                if (!pass.Succeeded)
+                {
+                    TempData["ErrorMessage"] = string.Join("; ", pass.Errors.Select(e => e.Description));
+                    return RedirectToAction("Dashboard", "Admin");
+                }
+                await _signInManager.RefreshSignInAsync(user);
             }
 
+            TempData["SuccessMessage"] = "Учетные данные администратора обновлены";
             return RedirectToAction("Dashboard", "Admin");
         }
 
