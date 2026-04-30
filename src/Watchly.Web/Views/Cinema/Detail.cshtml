@@ -190,11 +190,12 @@ async function toggleLike(btn, commentId) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `commentId=${commentId}${token ? '&__RequestVerificationToken=' + encodeURIComponent(token.value) : ''}`
         });
-        const icon = btn.querySelector('i');
-        const liked = btn.classList.toggle('liked');
+        const isLiked = btn.classList.contains('liked');
         const count = parseInt(btn.textContent.trim().split(/\s+/).pop()) || 0;
-        btn.innerHTML = `<i class="fas fa-thumbs-up"></i> ${liked ? count + 1 : Math.max(0, count - 1)}`;
-        if (liked) btn.classList.add('liked'); else btn.classList.remove('liked');
+        const newCount = isLiked ? Math.max(0, count - 1) : count + 1;
+        const newClass = isLiked ? 'btn-like' : 'btn-like liked';
+        btn.className = newClass;
+        btn.innerHTML = `<i class="fas fa-thumbs-up"></i> ${newCount}`;
     } catch {}
 }
 </script>

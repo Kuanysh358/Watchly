@@ -147,7 +147,7 @@ public class AccountTests
         userManager.Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>())).ReturnsAsync(IdentityResult.Success);
         var signInManager = BuildSignInManagerMock(userManager);
 
-        var controller = BuildController(userManager, signInManager);;
+        var controller = BuildController(userManager, signInManager);
         controller.Url = Mock.Of<Microsoft.AspNetCore.Mvc.IUrlHelper>();
 
         var result = await controller.Register(new RegisterViewModel

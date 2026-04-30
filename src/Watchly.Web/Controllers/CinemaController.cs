@@ -46,7 +46,7 @@ namespace Watchly.Web.Controllers
             return RedirectToAction(nameof(Detail), new { id = movieId });
         }
 
-        [Authorize, HttpPost]
+        [Authorize, HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> LikeComment(int commentId)
         {
             await _movieService.ToggleCommentLikeAsync(commentId, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
