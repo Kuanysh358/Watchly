@@ -4,16 +4,30 @@
 <section class="player-section mb-4">
     <h2 class="section-title">@Model.Title</h2>
     <div class="video-player-wrap">
-        @if (Model.IsIframe)
+        @if (string.IsNullOrWhiteSpace(Model.StreamUrl))
         {
-            <iframe class="trailer-player" src="@Model.StreamUrl" allowfullscreen referrerpolicy="origin"></iframe>
+            <div class="player-no-video">
+                <i class="fas fa-film fa-3x mb-3"></i>
+                <p>Видео недоступно для этого фильма.</p>
+                <a class="btn-secondary" asp-controller="Cinema" asp-action="Detail" asp-route-id="@Model.MovieId"><i class="fas fa-arrow-left"></i> Назад к фильму</a>
+            </div>
+        }
+        else if (Model.IsIframe)
+        {
+            <div class="trailer-player-wrap">
+                <iframe class="trailer-player" src="@Model.StreamUrl" allowfullscreen referrerpolicy="origin" allow="autoplay; fullscreen"></iframe>
+            </div>
         }
         else
         {
             <video id="watchlyPlayer" controls style="width:100%;max-height:75vh;background:#000;border-radius:12px;" preload="metadata">
                 <source src="@Model.StreamUrl" />
+                Ваш браузер не поддерживает воспроизведение видео.
             </video>
         }
+    </div>
+    <div class="mt-3">
+        <a class="btn-secondary" asp-controller="Cinema" asp-action="Detail" asp-route-id="@Model.MovieId"><i class="fas fa-arrow-left"></i> Назад к фильму</a>
     </div>
 </section>
 

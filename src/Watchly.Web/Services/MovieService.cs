@@ -41,7 +41,7 @@ namespace Watchly.Web.Services
             {
                 Popular = all.OrderByDescending(m => m.Rating).ThenByDescending(m => m.CreatedAt).Take(8).Select(m => MapCard(m)).ToList(),
                 NewReleases = all.OrderByDescending(m => m.ReleaseYear).ThenByDescending(m => m.CreatedAt).Where(m => m.ReleaseYear >= DateTime.UtcNow.Year - 1).Take(8).Select(m => MapCard(m)).ToList(),
-                Recommended = all.OrderByDescending(m => m.Comments.Count).ThenByDescending(m => m.Rating).Take(8).Select(m => MapCard(m)).ToList(),
+                Recommended = all.OrderByDescending(m => m.Rating).ThenByDescending(m => m.ReleaseYear).Take(8).Select(m => MapCard(m)).ToList(),
                 ByGenres = all.SelectMany(m => m.MovieGenres.Select(g => new { m, g.Genre.Name }))
                     .GroupBy(x => x.Name)
                     .OrderByDescending(g => g.Count())
@@ -122,7 +122,6 @@ namespace Watchly.Web.Services
                 PosterUrl = movie.PosterUrl,
                 TrailerUrl = movie.TrailerUrl,
                 VideoUrl = movie.VideoUrl,
-                TmdbId = movie.TmdbId,
                 TmdbId = movie.TmdbId,
                 DurationMinutes = movie.DurationMinutes,
                 Country = movie.Country,

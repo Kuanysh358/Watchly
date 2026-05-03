@@ -1,42 +1,55 @@
 @model Watchly.Web.Models.ViewModels.HomeIndexViewModel
 @{ ViewData["Title"] = "Главная"; }
-@{ var featured = Model.NewReleases.FirstOrDefault() ?? Model.Popular.FirstOrDefault() ?? Model.Recommended.FirstOrDefault(); }
-
-<section class="home-search mb-4">
-    <input id="homeSearch" class="form-control" placeholder="Поиск фильмов на главной..." />
-    <div id="homeSearchResults" class="movie-grid mt-3" style="display:none;"></div>
-</section>
+@{ var featured = Model.Popular.FirstOrDefault() ?? Model.NewReleases.FirstOrDefault() ?? Model.Recommended.FirstOrDefault(); }
 
 @if (featured != null)
 {
 <section class="showcase-hero mb-5">
     <div class="showcase-main">
-        <img class="showcase-backdrop" src="@(string.IsNullOrWhiteSpace(featured.PosterUrl) ? "https://via.placeholder.com/1200x520?text=Watchly" : featured.PosterUrl)" alt="@featured.Title" />
+        <img class="showcase-backdrop" src="@(string.IsNullOrWhiteSpace(featured.PosterUrl) ? "https://via.placeholder.com/1280x540?text=Watchly" : featured.PosterUrl)" alt="@featured.Title" />
         <div class="showcase-overlay"></div>
         <div class="showcase-content">
             <span class="showcase-chip">Рекомендуем к просмотру</span>
             <h1>@featured.Title</h1>
-            <p>Смотрите популярные и новые релизы в высоком качестве.</p>
+            <p>@(featured.ReleaseYear > 0 ? featured.ReleaseYear.ToString() : "") @(featured.Rating > 0 ? $"· ★ {featured.Rating:0.0}" : "") @(featured.Genres.Any() ? "· " + string.Join(", ", featured.Genres.Take(2)) : "")</p>
             <div class="showcase-actions">
-                <a class="btn-primary btn-lg" asp-controller="Video" asp-action="Play" asp-route-movieId="@featured.Id"><i class="fas fa-play"></i> Смотреть</a>
-                <a class="btn-secondary btn-lg" asp-controller="Cinema" asp-action="Detail" asp-route-id="@featured.Id"><i class="fas fa-heart"></i> В избранное</a>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a class="btn-primary btn-lg" asp-controller="Video" asp-action="Play" asp-route-movieId="@featured.Id"><i class="fas fa-play"></i> Смотреть</a>
+                }
+                else
+                {
+                    <a class="btn-primary btn-lg" asp-controller="Account" asp-action="Login"><i class="fas fa-play"></i> Смотреть</a>
+                }
+                <a class="btn-secondary btn-lg" asp-controller="Cinema" asp-action="Detail" asp-route-id="@featured.Id"><i class="fas fa-info-circle"></i> Подробнее</a>
             </div>
         </div>
     </div>
 </section>
 }
 
-@foreach (var section in new[]{("Популярные", Model.Popular), ("Новинки", Model.NewReleases), ("Рекомендуемые", Model.Recommended)})
+<section class="home-search mb-5">
+    <input id="homeSearch" class="home-search-input" placeholder="🔍  Поиск фильмов..." autocomplete="off" />
+    <div id="homeSearchResults" class="movie-grid mt-3" style="display:none;"></div>
+</section>
+
+@foreach (var grp in new[]{("🔥 Популярные", Model.Popular), ("🆕 Новинки", Model.NewReleases), ("⭐ Рекомендуемые", Model.Recommended)})
 {
 <section class="mb-5">
-    <div class="section-header"><h3>@section.Item1</h3></div>
+    <div class="section-header"><h3>@grp.Item1</h3></div>
     <div class="movie-grid">
-        @foreach (var movie in section.Item2)
+        @foreach (var movie in grp.Item2)
         {
             <article class="movie-card movie-card-rich">
                 <a asp-controller="Cinema" asp-action="Detail" asp-route-id="@movie.Id" class="movie-card-link">
-                    <img src="@(string.IsNullOrWhiteSpace(movie.PosterUrl) ? "https://via.placeholder.com/250x360?text=No+Poster" : movie.PosterUrl)" alt="@movie.Title" />
-                    <div class="movie-card-info"><h4 class="movie-card-title">@movie.Title</h4></div>
+                    <img src="@(string.IsNullOrWhiteSpace(movie.PosterUrl) ? "https://via.placeholder.com/250x360?text=No+Poster" : movie.PosterUrl)" alt="@movie.Title" loading="lazy" />
+                    <div class="movie-card-info">
+                        <h4 class="movie-card-title">@movie.Title</h4>
+                        <div class="movie-card-meta">
+                            <span class="movie-year">@movie.ReleaseYear</span>
+                            @if (movie.Rating > 0) { <span class="movie-rating"><i class="fas fa-star"></i> @movie.Rating</span> }
+                        </div>
+                    </div>
                 </a>
             </article>
         }
@@ -44,23 +57,41 @@
 </section>
 }
 
+@if (!Model.Popular.Any() && !Model.NewReleases.Any() && !Model.Recommended.Any())
+{
+    <div class="empty-state">
+        <i class="fas fa-film fa-3x mb-3"></i>
+        <p>Фильмы ещё не добавлены. <a asp-controller="Admin" asp-action="Dashboard">Добавить через админ-панель.</a></p>
+    </div>
+}
+
 @section Scripts {
 <script>
 (() => {
  const input = document.getElementById('homeSearch');
  const results = document.getElementById('homeSearchResults');
+ if (!input) return;
  let timer;
- input?.addEventListener('input', () => {
+ input.addEventListener('input', () => {
    clearTimeout(timer);
    const q = input.value.trim();
    if (q.length < 2) { results.style.display='none'; results.innerHTML=''; return; }
    timer = setTimeout(async () => {
-     const response = await fetch(`@Url.Action("Search", "Home")?query=${encodeURIComponent(q)}`);
-     const data = await response.json();
-     results.innerHTML = data.map(m => `<article class="movie-card"><a class="movie-card-link" href="/Cinema/Detail/${m.id}"><img src="${m.posterUrl || 'https://via.placeholder.com/250x360?text=No+Poster'}"/><div class="movie-card-info"><h4 class="movie-card-title">${m.title}</h4></div></a></article>`).join('');
-     results.style.display='grid';
-   }, 250);
+     try {
+       const response = await fetch(`@Url.Action("Search", "Home")?query=${encodeURIComponent(q)}`);
+       if (!response.ok) return;
+       const data = await response.json();
+       if (!data.length) { results.innerHTML='<p class="text-muted">Ничего не найдено.</p>'; results.style.display='block'; return; }
+       results.innerHTML = data.map(m => {
+         const poster = m.posterUrl || 'https://via.placeholder.com/250x360?text=No+Poster';
+         const ratingHtml = m.rating > 0 ? `<span class="movie-rating"><i class="fas fa-star"></i> ${m.rating}</span>` : '';
+         return `<article class="movie-card"><a class="movie-card-link" href="/Cinema/Detail/${m.id}"><img src="${poster}" loading="lazy"/><div class="movie-card-info"><h4 class="movie-card-title">${m.title}</h4><div class="movie-card-meta"><span class="movie-year">${m.releaseYear || ''}</span>${ratingHtml}</div></div></a></article>`;
+       }).join('');
+       results.style.display='grid';
+     } catch {}
+   }, 300);
  });
 })();
 </script>
 }
+
