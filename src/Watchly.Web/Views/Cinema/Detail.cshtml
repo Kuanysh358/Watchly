@@ -2,9 +2,9 @@
 @{ ViewData["Title"] = Model.Title; }
 
 @{
-    bool isEmbedUrl(string? u) => !string.IsNullOrWhiteSpace(u) &&
-        (u.Contains("vidsrc", StringComparison.OrdinalIgnoreCase) ||
-         u.Contains("embed", StringComparison.OrdinalIgnoreCase));
+    var hasMoviePlayer = !string.IsNullOrWhiteSpace(Model.VideoUrl);
+    var hasTrailer = !string.IsNullOrWhiteSpace(Model.TrailerUrl);
+    var initialMode = hasMoviePlayer ? "movie" : (hasTrailer ? "trailer" : "none");
 }
 
 <div class="detail-hero">
@@ -27,7 +27,8 @@
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <div class="d-flex gap-2 flex-wrap mt-3">
-                    <a class="btn-primary" asp-controller="Video" asp-action="Play" asp-route-movieId="@Model.Id"><i class="fas fa-play"></i> Смотреть</a>
+                    <button type="button" id="showMovieBtn" class="btn-primary" @(hasMoviePlayer ? null : "disabled")><i class="fas fa-play"></i> Смотреть</button>
+                    <button type="button" id="showTrailerBtn" class="btn-secondary" @(hasTrailer ? null : "disabled")><i class="fas fa-video"></i> Трейлер</button>
                     <form asp-action="ToggleWatchlist" method="post">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="movieId" value="@Model.Id" />
@@ -42,50 +43,26 @@
     </div>
 </div>
 
-@* Player section: VidSrc embed or direct video, with trailer as fallback *@
-@if (!string.IsNullOrWhiteSpace(Model.VideoUrl))
-{
-    <section class="player-section mb-4">
-        <h3 class="section-title"><i class="fas fa-play-circle"></i> Плеер</h3>
-        <div class="video-player-wrap">
-            @if (isEmbedUrl(Model.VideoUrl))
-            {
-                <div class="trailer-player-wrap">
-                    <iframe class="trailer-player" src="@Model.VideoUrl" allowfullscreen referrerpolicy="origin" allow="autoplay; fullscreen" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
-                </div>
-            }
-            else
-            {
-                <video id="watchlyPlayer" controls style="width:100%;max-height:520px;background:#000;border-radius:12px;" preload="metadata">
-                    <source src="@Model.VideoUrl" />
-                    Ваш браузер не поддерживает видео.
-                </video>
-                @if (Model.ResumePositionSeconds > 0)
-                {
-                    <div class="mt-2">
-                        <button id="resumeBtn" type="button" class="btn-secondary">
-                            <i class="fas fa-redo"></i> Продолжить с @TimeSpan.FromSeconds(Model.ResumePositionSeconds).ToString(@"hh\:mm\:ss")
-                        </button>
-                    </div>
-                }
-            }
+<section id="playerSection" class="player-section mb-4" data-initial-mode="@initialMode" data-movie-url="@Model.VideoUrl" data-fallback-url="@(Model.TmdbId.HasValue ? $"https://vidsrc.me/embed/movie?tmdb={Model.TmdbId.Value}" : "")" data-trailer-url="@Model.TrailerUrl">
+    <h3 class="section-title"><i class="fas fa-play-circle"></i> Плеер</h3>
+    <div id="moviePlayerBlock" class="video-player-wrap @(initialMode == "movie" ? string.Empty : "d-none")">
+        <div class="trailer-player-wrap">
+            <iframe id="moviePlayerFrame" class="trailer-player" src="@(initialMode == "movie" ? Model.VideoUrl : "")" allowfullscreen allow="autoplay; fullscreen" sandbox="allow-forms allow-scripts allow-same-origin" referrerpolicy="origin"></iframe>
         </div>
-    </section>
-}
-else if (!string.IsNullOrWhiteSpace(Model.TrailerUrl))
-{
-    <section class="mb-4">
-        <h3 class="section-title"><i class="fas fa-video"></i> Трейлер</h3>
-        <div class="trailer-player-wrap"><iframe class="trailer-player" src="@Model.TrailerUrl" allowfullscreen></iframe></div>
-    </section>
-}
-else
-{
-    <section class="mb-4 detail-panel text-center py-4">
+    </div>
+    <div id="trailerPlayerBlock" class="video-player-wrap @(initialMode == "trailer" ? string.Empty : "d-none")">
+        <div class="trailer-player-wrap">
+            <iframe id="trailerFrame" class="trailer-player" src="@(initialMode == "trailer" ? Model.TrailerUrl : "")" allowfullscreen allow="autoplay; encrypted-media; fullscreen" referrerpolicy="origin"></iframe>
+        </div>
+    </div>
+    @if (!hasMoviePlayer && !hasTrailer)
+    {
+    <div id="emptyPlayerBlock" class="detail-panel text-center py-4">
         <i class="fas fa-film fa-3x mb-3 text-muted"></i>
         <p class="text-muted">Видео недоступно для этого фильма.</p>
-    </section>
-}
+    </div>
+    }
+</section>
 
 @if (User.Identity?.IsAuthenticated == true)
 {
@@ -161,39 +138,50 @@ else
 
 @section Scripts {
 <script>
-try {
-    (() => {
-        const player = document.getElementById('watchlyPlayer');
-        if (!player) return;
-        const movieId = @Model.Id;
-        const initialResume = @Model.ResumePositionSeconds;
-        const resumeBtn = document.getElementById('resumeBtn');
-        if (resumeBtn) {
-            resumeBtn.addEventListener('click', () => {
-                player.currentTime = initialResume;
-                player.play();
-                resumeBtn.style.display = 'none';
-            });
-        }
+(() => {
+    const section = document.getElementById('playerSection');
+    if (!section) return;
+    const showMovieBtn = document.getElementById('showMovieBtn');
+    const showTrailerBtn = document.getElementById('showTrailerBtn');
+    const movieBlock = document.getElementById('moviePlayerBlock');
+    const trailerBlock = document.getElementById('trailerPlayerBlock');
+    const movieFrame = document.getElementById('moviePlayerFrame');
+    const trailerFrame = document.getElementById('trailerFrame');
+    const primaryMovieUrl = section.dataset.movieUrl || '';
+    const fallbackMovieUrl = section.dataset.fallbackUrl || '';
+    const trailerUrl = section.dataset.trailerUrl || '';
+    let fallbackApplied = false;
 
-        let lastSent = 0;
-        const save = async () => {
-            try {
-                const current = Math.floor(player.currentTime || 0);
-                if (current - lastSent < 15) return;
-                lastSent = current;
-                const token = document.querySelector('input[name="__RequestVerificationToken"]');
-                await fetch('@Url.Action("SaveResume", "Cinema")', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `movieId=${movieId}&positionSeconds=${current}${token ? '&__RequestVerificationToken=' + encodeURIComponent(token.value) : ''}`
-                });
-            } catch {}
-        };
-        player.addEventListener('timeupdate', save);
-        window.addEventListener('beforeunload', save);
-    })();
-} catch {}
+    const switchMode = (mode) => {
+        if (movieBlock) movieBlock.classList.toggle('d-none', mode !== 'movie');
+        if (trailerBlock) trailerBlock.classList.toggle('d-none', mode !== 'trailer');
+        if (mode === 'movie' && movieFrame && !movieFrame.src && primaryMovieUrl) movieFrame.src = primaryMovieUrl;
+        if (mode === 'trailer' && trailerFrame) {
+            if (!trailerFrame.src && trailerUrl) trailerFrame.src = trailerUrl;
+            if (window.YT && typeof window.YT.Player === 'function') { /* YouTube API available in trailer mode only */ }
+        }
+    };
+
+    if (movieFrame) {
+        movieFrame.addEventListener('error', () => {
+            if (!fallbackApplied && fallbackMovieUrl) {
+                fallbackApplied = true;
+                movieFrame.src = fallbackMovieUrl;
+            }
+        });
+        if (primaryMovieUrl && fallbackMovieUrl) {
+            setTimeout(() => {
+                if (!fallbackApplied && movieFrame.src === primaryMovieUrl) {
+                    fallbackApplied = true;
+                    movieFrame.src = fallbackMovieUrl;
+                }
+            }, 5000);
+        }
+    }
+    if (showMovieBtn) showMovieBtn.addEventListener('click', () => switchMode('movie'));
+    if (showTrailerBtn) showTrailerBtn.addEventListener('click', () => switchMode('trailer'));
+    switchMode(section.dataset.initialMode || 'none');
+})();
 
 try {
     // Rating stars
