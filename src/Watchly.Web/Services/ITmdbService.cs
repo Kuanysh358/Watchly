@@ -13,9 +13,9 @@ namespace Watchly.Web.Services
         Task<TmdbMovieDetailDto?> GetMovieDetailAsync(int tmdbId);
 
         /// <summary>
-        /// Получить популярные фильмы
+        /// Получить популярные фильмы (page — номер страницы TMDB, 1–500)
         /// </summary>
-        Task<IEnumerable<TmdbMovieDto>> GetPopularMoviesAsync();
+        Task<IEnumerable<TmdbMovieDto>> GetPopularMoviesAsync(int page = 1);
 
 
     }

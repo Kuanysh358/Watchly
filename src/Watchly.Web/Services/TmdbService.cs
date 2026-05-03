@@ -95,14 +95,15 @@ namespace Watchly.Web.Services
             }
         }
 
-        public async Task<IEnumerable<TmdbMovieDto>> GetPopularMoviesAsync()
+        public async Task<IEnumerable<TmdbMovieDto>> GetPopularMoviesAsync(int page = 1)
         {
             try
             {
                 if (string.IsNullOrEmpty(_apiKey))
                     return new List<TmdbMovieDto>();
 
-                var url = $"{BaseUrl}/movie/popular?api_key={_apiKey}&language=ru";
+                var safePage = Math.Clamp(page, 1, 500);
+                var url = $"{BaseUrl}/movie/popular?api_key={_apiKey}&language=ru&page={safePage}";
                 var response = await _httpClient.GetAsync(url);
 
                 if (!response.IsSuccessStatusCode)

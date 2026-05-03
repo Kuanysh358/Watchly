@@ -91,21 +91,50 @@ namespace Watchly.Web.Controllers
             });
         }
 
+        private static readonly Random _rng = new();
+
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> AutoImportTmdb([FromBody] AutoImportRequest? request)
         {
             var excludedTmdbIds = (request?.ExcludedTmdbIds ?? new()).ToHashSet();
             var batchSize = Math.Clamp(request?.BatchSize ?? 5, 1, 10);
-            var popularMovies = (await _tmdbService.GetPopularMoviesAsync()).Where(m => !excludedTmdbIds.Contains(m.Id)).OrderBy(_ => Guid.NewGuid()).Take(batchSize).ToList();
+
+            // Use a random TMDB page so each button press fetches different movies
+            var page = _rng.Next(1, 11);
+            var popularMovies = (await _tmdbService.GetPopularMoviesAsync(page))
+                .Where(m => !excludedTmdbIds.Contains(m.Id))
+                .ToList();
 
             var dbGenres = await _db.Genres.ToListAsync();
             var imported = new List<object>();
             var importedTmdbIds = new List<int>();
+            int importedCount = 0;
 
             foreach (var popularMovie in popularMovies)
             {
+                if (importedCount >= batchSize) break;
+
                 var detail = await _tmdbService.GetMovieDetailAsync(popularMovie.Id);
                 if (detail == null) continue;
+
+                var vidsrcUrl = $"https://vidsrc.to/embed/movie/{detail.Id}";
+
+                // Check for existing movie and update VideoUrl if missing
+                var existing = await _db.Movies.Include(m => m.MovieGenres)
+                    .FirstOrDefaultAsync(m => m.TmdbId == detail.Id);
+                if (existing != null)
+                {
+                    if (string.IsNullOrWhiteSpace(existing.VideoUrl))
+                    {
+                        existing.VideoUrl = vidsrcUrl;
+                        existing.UpdatedAt = DateTime.UtcNow;
+                        await _db.SaveChangesAsync();
+                    }
+                    importedTmdbIds.Add(detail.Id);
+                    imported.Add(new { title = detail.Title, releaseYear = detail.ReleaseYear, rating = detail.VoteAverage, videoUrl = vidsrcUrl, updated = true });
+                    importedCount++;
+                    continue;
+                }
 
                 var selectedGenreIds = new List<int>();
                 foreach (var genreName in detail.Genres.Distinct(StringComparer.OrdinalIgnoreCase))
@@ -121,7 +150,6 @@ namespace Watchly.Web.Controllers
                     selectedGenreIds.Add(genre.Id);
                 }
 
-                var videoId = await _youtubeService.SearchTrailerAsync($"{detail.Title} {detail.ReleaseYear} trailer official");
                 var createModel = new MovieCreateEditViewModel
                 {
                     Title = detail.Title,
@@ -129,7 +157,7 @@ namespace Watchly.Web.Controllers
                     ReleaseYear = detail.ReleaseYear ?? DateTime.UtcNow.Year,
                     Rating = detail.VoteAverage,
                     PosterUrl = string.IsNullOrWhiteSpace(detail.PosterPath) ? null : $"https://image.tmdb.org/t/p/original{detail.PosterPath}",
-                    TrailerUrl = string.IsNullOrWhiteSpace(videoId) ? null : _youtubeService.GetEmbedUrl(videoId),
+                    VideoUrl = vidsrcUrl,
                     TmdbId = detail.Id,
                     DurationMinutes = detail.Runtime,
                     Country = detail.Country,
@@ -141,10 +169,11 @@ namespace Watchly.Web.Controllers
                 if (!createdId.HasValue) continue;
 
                 importedTmdbIds.Add(detail.Id);
-                imported.Add(new { title = detail.Title, releaseYear = detail.ReleaseYear, rating = detail.VoteAverage, trailerUrl = createModel.TrailerUrl, videoId });
+                imported.Add(new { title = detail.Title, releaseYear = detail.ReleaseYear, rating = detail.VoteAverage, videoUrl = vidsrcUrl, updated = false });
+                importedCount++;
             }
 
-            return Json(new { importedCount = imported.Count, importedTmdbIds, movies = imported, message = imported.Count > 0 ? $"Импортировано фильмов: {imported.Count}" : "Нет новых фильмов (дубликаты исключены)." });
+            return Json(new { importedCount, importedTmdbIds, movies = imported, message = importedCount > 0 ? $"Импортировано фильмов: {importedCount}" : "Нет новых фильмов для импорта." });
         }
 
         [HttpGet]

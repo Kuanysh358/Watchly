@@ -1,6 +1,12 @@
 @model Watchly.Web.Models.ViewModels.MovieDetailViewModel
 @{ ViewData["Title"] = Model.Title; }
 
+@{
+    bool isEmbedUrl(string? u) => !string.IsNullOrWhiteSpace(u) &&
+        (u.Contains("vidsrc", StringComparison.OrdinalIgnoreCase) ||
+         u.Contains("embed", StringComparison.OrdinalIgnoreCase));
+}
+
 <div class="detail-hero">
     <div class="detail-layout">
         <div class="detail-poster-wrap">
@@ -36,32 +42,48 @@
     </div>
 </div>
 
+@* Player section: VidSrc embed or direct video, with trailer as fallback *@
 @if (!string.IsNullOrWhiteSpace(Model.VideoUrl))
 {
     <section class="player-section mb-4">
         <h3 class="section-title"><i class="fas fa-play-circle"></i> Плеер</h3>
         <div class="video-player-wrap">
-            <video id="watchlyPlayer" controls style="width:100%;max-height:520px;background:#000;border-radius:12px;" preload="metadata">
-                <source src="@Model.VideoUrl" />
-                Ваш браузер не поддерживает видео.
-            </video>
+            @if (isEmbedUrl(Model.VideoUrl))
+            {
+                <div class="trailer-player-wrap">
+                    <iframe class="trailer-player" src="@Model.VideoUrl" allowfullscreen referrerpolicy="origin" allow="autoplay; fullscreen" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+                </div>
+            }
+            else
+            {
+                <video id="watchlyPlayer" controls style="width:100%;max-height:520px;background:#000;border-radius:12px;" preload="metadata">
+                    <source src="@Model.VideoUrl" />
+                    Ваш браузер не поддерживает видео.
+                </video>
+                @if (Model.ResumePositionSeconds > 0)
+                {
+                    <div class="mt-2">
+                        <button id="resumeBtn" type="button" class="btn-secondary">
+                            <i class="fas fa-redo"></i> Продолжить с @TimeSpan.FromSeconds(Model.ResumePositionSeconds).ToString(@"hh\:mm\:ss")
+                        </button>
+                    </div>
+                }
+            }
         </div>
-        @if (Model.ResumePositionSeconds > 0)
-        {
-            <div class="mt-2">
-                <button id="resumeBtn" type="button" class="btn-secondary">
-                    <i class="fas fa-redo"></i> Продолжить с @TimeSpan.FromSeconds(Model.ResumePositionSeconds).ToString(@"hh\:mm\:ss")
-                </button>
-            </div>
-        }
     </section>
 }
-
-@if (!string.IsNullOrWhiteSpace(Model.TrailerUrl))
+else if (!string.IsNullOrWhiteSpace(Model.TrailerUrl))
 {
     <section class="mb-4">
         <h3 class="section-title"><i class="fas fa-video"></i> Трейлер</h3>
         <div class="trailer-player-wrap"><iframe class="trailer-player" src="@Model.TrailerUrl" allowfullscreen></iframe></div>
+    </section>
+}
+else
+{
+    <section class="mb-4 detail-panel text-center py-4">
+        <i class="fas fa-film fa-3x mb-3 text-muted"></i>
+        <p class="text-muted">Видео недоступно для этого фильма.</p>
     </section>
 }
 
@@ -139,53 +161,59 @@
 
 @section Scripts {
 <script>
-(() => {
-    const player = document.getElementById('watchlyPlayer');
-    if (!player) return;
-    const movieId = @Model.Id;
-    const initialResume = @Model.ResumePositionSeconds;
-    const resumeBtn = document.getElementById('resumeBtn');
-    if (resumeBtn) {
-        resumeBtn.addEventListener('click', () => {
-            player.currentTime = initialResume;
-            player.play();
-            resumeBtn.style.display = 'none';
+try {
+    (() => {
+        const player = document.getElementById('watchlyPlayer');
+        if (!player) return;
+        const movieId = @Model.Id;
+        const initialResume = @Model.ResumePositionSeconds;
+        const resumeBtn = document.getElementById('resumeBtn');
+        if (resumeBtn) {
+            resumeBtn.addEventListener('click', () => {
+                player.currentTime = initialResume;
+                player.play();
+                resumeBtn.style.display = 'none';
+            });
+        }
+
+        let lastSent = 0;
+        const save = async () => {
+            try {
+                const current = Math.floor(player.currentTime || 0);
+                if (current - lastSent < 15) return;
+                lastSent = current;
+                const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                await fetch('@Url.Action("SaveResume", "Cinema")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `movieId=${movieId}&positionSeconds=${current}${token ? '&__RequestVerificationToken=' + encodeURIComponent(token.value) : ''}`
+                });
+            } catch {}
+        };
+        player.addEventListener('timeupdate', save);
+        window.addEventListener('beforeunload', save);
+    })();
+} catch {}
+
+try {
+    // Rating stars
+    const starBtns = document.querySelectorAll('.star-btn');
+    const scoreInput = document.getElementById('ratingScore');
+    if (starBtns.length && scoreInput) {
+        starBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const val = parseInt(btn.dataset.value);
+                scoreInput.value = val;
+                starBtns.forEach(b => b.classList.toggle('active', parseInt(b.dataset.value) <= val));
+            });
         });
     }
-
-    let lastSent = 0;
-    const save = async () => {
-        const current = Math.floor(player.currentTime || 0);
-        if (current - lastSent < 15) return;
-        lastSent = current;
-        const token = document.querySelector('input[name="__RequestVerificationToken"]');
-        await fetch('@Url.Action("SaveResume", "Cinema")', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `movieId=${movieId}&positionSeconds=${current}${token ? '&__RequestVerificationToken=' + encodeURIComponent(token.value) : ''}`
-        });
-    };
-    player.addEventListener('timeupdate', save);
-    window.addEventListener('beforeunload', save);
-})();
-
-// Rating stars
-const starBtns = document.querySelectorAll('.star-btn');
-const scoreInput = document.getElementById('ratingScore');
-if (starBtns.length && scoreInput) {
-    starBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const val = parseInt(btn.dataset.value);
-            scoreInput.value = val;
-            starBtns.forEach(b => b.classList.toggle('active', parseInt(b.dataset.value) <= val));
-        });
-    });
-}
+} catch {}
 
 // Like comment
 async function toggleLike(btn, commentId) {
-    const token = document.querySelector('input[name="__RequestVerificationToken"]');
     try {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]');
         await fetch('@Url.Action("LikeComment", "Cinema")', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -194,8 +222,7 @@ async function toggleLike(btn, commentId) {
         const isLiked = btn.classList.contains('liked');
         const count = parseInt(btn.textContent.trim().split(/\s+/).pop()) || 0;
         const newCount = isLiked ? Math.max(0, count - 1) : count + 1;
-        const newClass = isLiked ? 'btn-like' : 'btn-like liked';
-        btn.className = newClass;
+        btn.className = isLiked ? 'btn-like' : 'btn-like liked';
         btn.innerHTML = `<i class="fas fa-thumbs-up"></i> ${newCount}`;
     } catch {}
 }
