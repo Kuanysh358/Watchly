@@ -7,61 +7,71 @@
     var initialMode = hasMoviePlayer ? "movie" : (hasTrailer ? "trailer" : "none");
 }
 
-<div class="detail-hero">
-    <div class="detail-layout">
-        <div class="detail-poster-wrap">
-            <img class="detail-poster" src="@(string.IsNullOrWhiteSpace(Model.PosterUrl) ? "https://via.placeholder.com/300x450?text=No+Poster" : Model.PosterUrl)" alt="@Model.Title" />
-        </div>
-        <div class="detail-meta">
-            <h1 class="detail-title">@Model.Title <span class="detail-year">(@Model.ReleaseYear)</span></h1>
-            <div class="detail-info-row">
-                <span class="badge-rating"><i class="fas fa-star"></i> @Model.Rating</span>
-                <span class="detail-genres">@string.Join(", ", Model.Genres)</span>
+<section class="cinema-detail-page" id="cinemaDetailPage">
+    <div class="detail-backdrop" style="background-image: linear-gradient(120deg, rgba(10,7,20,.85), rgba(27,14,45,.9)), url('@(string.IsNullOrWhiteSpace(Model.BackdropUrl) ? Model.PosterUrl : Model.BackdropUrl)');"></div>
+
+    <div class="detail-shell">
+        <header class="detail-hero-v2">
+            <div class="detail-poster-wrap">
+                <img class="detail-poster" src="@(string.IsNullOrWhiteSpace(Model.PosterUrl) ? "https://via.placeholder.com/300x450?text=No+Poster" : Model.PosterUrl)" alt="@Model.Title" />
             </div>
-            <div class="detail-info-row text-muted small">
-                @if (!string.IsNullOrWhiteSpace(Model.Director)) { <span><strong>Режиссёр:</strong> @Model.Director</span> }
-                @if (!string.IsNullOrWhiteSpace(Model.Country)) { <span><strong>Страна:</strong> @Model.Country</span> }
-                @if (Model.DurationMinutes.HasValue) { <span><strong>Длительность:</strong> @Model.DurationMinutes мин.</span> }
+
+            <div class="detail-main">
+                <div class="detail-kicker">Смотреть онлайн</div>
+                <h1 class="detail-title">@Model.Title <span class="detail-year">(@Model.ReleaseYear)</span></h1>
+
+                <div class="detail-info-row">
+                    <span class="badge-rating"><i class="fas fa-star"></i> @Model.Rating</span>
+                    <span class="detail-genres">@string.Join(" • ", Model.Genres)</span>
+                </div>
+
+                <div class="detail-info-row text-muted small">
+                    @if (!string.IsNullOrWhiteSpace(Model.Director)) { <span><strong>Режиссёр:</strong> @Model.Director</span> }
+                    @if (!string.IsNullOrWhiteSpace(Model.Country)) { <span><strong>Страна:</strong> @Model.Country</span> }
+                    @if (Model.DurationMinutes.HasValue) { <span><strong>Длительность:</strong> @Model.DurationMinutes мин.</span> }
+                </div>
+
+                <p class="detail-description">@Model.Description</p>
+
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <div class="detail-actions mt-3">
+                        <button type="button" id="showMovieBtn" class="btn-primary" @(hasMoviePlayer ? null : "disabled")><i class="fas fa-play"></i> Смотреть фильм</button>
+                        <button type="button" id="showTrailerBtn" class="btn-secondary" @(hasTrailer ? null : "disabled")><i class="fas fa-video"></i> Трейлер</button>
+                        <form asp-action="ToggleWatchlist" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="movieId" value="@Model.Id" />
+                            <button type="submit" class="@(Model.IsInWatchlist ? "btn-danger" : "btn-primary")">
+                                <i class="fas @(Model.IsInWatchlist ? "fa-heart-broken" : "fa-heart")"></i>
+                                @(Model.IsInWatchlist ? "Убрать из избранного" : "В избранное")
+                            </button>
+                        </form>
+                    </div>
+                }
             </div>
-            <p class="detail-description">@Model.Description</p>
-            @if (User.Identity?.IsAuthenticated == true)
+        </header>
+
+        <section id="playerSection" class="player-section mb-4" data-initial-mode="@initialMode" data-movie-url="@Model.VideoUrl" data-fallback-url="@(Model.TmdbId.HasValue ? $"https://vidsrc.me/embed/movie?tmdb={Model.TmdbId.Value}" : "")" data-trailer-url="@Model.TrailerUrl">
+            <h3 class="section-title"><i class="fas fa-play-circle"></i> Плеер</h3>
+            <div id="moviePlayerBlock" class="video-player-wrap @(initialMode == "movie" ? string.Empty : "d-none")">
+                <div class="trailer-player-wrap">
+                    <iframe id="moviePlayerFrame" class="trailer-player" src="@(initialMode == "movie" ? Model.VideoUrl : "")" allowfullscreen allow="autoplay; fullscreen" sandbox="allow-forms allow-scripts allow-same-origin" referrerpolicy="origin"></iframe>
+                </div>
+            </div>
+            <div id="trailerPlayerBlock" class="video-player-wrap @(initialMode == "trailer" ? string.Empty : "d-none")">
+                <div class="trailer-player-wrap">
+                    <iframe id="trailerFrame" class="trailer-player" src="" allowfullscreen allow="autoplay; encrypted-media; fullscreen" referrerpolicy="origin"></iframe>
+                </div>
+            </div>
+            @if (!hasMoviePlayer && !hasTrailer)
             {
-                <div class="d-flex gap-2 flex-wrap mt-3">
-                    <button type="button" id="showMovieBtn" class="btn-primary" @(hasMoviePlayer ? null : "disabled")><i class="fas fa-play"></i> Смотреть</button>
-                    <button type="button" id="showTrailerBtn" class="btn-secondary" @(hasTrailer ? null : "disabled")><i class="fas fa-video"></i> Трейлер</button>
-                    <form asp-action="ToggleWatchlist" method="post">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="movieId" value="@Model.Id" />
-                        <button type="submit" class="@(Model.IsInWatchlist ? "btn-danger" : "btn-primary")">
-                            <i class="fas @(Model.IsInWatchlist ? "fa-heart-broken" : "fa-heart")"></i>
-                            @(Model.IsInWatchlist ? "Убрать из избранного" : "В избранное")
-                        </button>
-                    </form>
+                <div id="emptyPlayerBlock" class="detail-panel text-center py-4">
+                    <i class="fas fa-film fa-3x mb-3 text-muted"></i>
+                    <p class="text-muted">Видео недоступно для этого фильма.</p>
                 </div>
             }
-        </div>
+        </section>
     </div>
-</div>
-
-<section id="playerSection" class="player-section mb-4" data-initial-mode="@initialMode" data-movie-url="@Model.VideoUrl" data-fallback-url="@(Model.TmdbId.HasValue ? $"https://vidsrc.me/embed/movie?tmdb={Model.TmdbId.Value}" : "")" data-trailer-url="@Model.TrailerUrl">
-    <h3 class="section-title"><i class="fas fa-play-circle"></i> Плеер</h3>
-    <div id="moviePlayerBlock" class="video-player-wrap @(initialMode == "movie" ? string.Empty : "d-none")">
-        <div class="trailer-player-wrap">
-            <iframe id="moviePlayerFrame" class="trailer-player" src="@(initialMode == "movie" ? Model.VideoUrl : "")" allowfullscreen allow="autoplay; fullscreen" sandbox="allow-forms allow-scripts allow-same-origin" referrerpolicy="origin"></iframe>
-        </div>
-    </div>
-    <div id="trailerPlayerBlock" class="video-player-wrap @(initialMode == "trailer" ? string.Empty : "d-none")">
-        <div class="trailer-player-wrap">
-            <iframe id="trailerFrame" class="trailer-player" src="@(initialMode == "trailer" ? Model.TrailerUrl : "")" allowfullscreen allow="autoplay; encrypted-media; fullscreen" referrerpolicy="origin"></iframe>
-        </div>
-    </div>
-    @if (!hasMoviePlayer && !hasTrailer)
-    {
-    <div id="emptyPlayerBlock" class="detail-panel text-center py-4">
-        <i class="fas fa-film fa-3x mb-3 text-muted"></i>
-        <p class="text-muted">Видео недоступно для этого фильма.</p>
-    </div>
-    }
 </section>
 
 @if (User.Identity?.IsAuthenticated == true)
@@ -87,13 +97,9 @@
             <h3 class="section-title mb-0"><i class="fas fa-comments"></i> Комментарии (@Model.Comments.Count)</h3>
             <div class="comment-sort">
                 <a asp-action="Detail" asp-route-id="@Model.Id" asp-route-commentSort="newest"
-                   class="btn-secondary btn-sm @(ViewBag.CommentSort == "newest" ? "active" : "")">
-                    Новые
-                </a>
+                   class="btn-secondary btn-sm @(ViewBag.CommentSort == "newest" ? "active" : "")">Новые</a>
                 <a asp-action="Detail" asp-route-id="@Model.Id" asp-route-commentSort="popular"
-                   class="btn-secondary btn-sm @(ViewBag.CommentSort == "popular" ? "active" : "")">
-                    Популярные
-                </a>
+                   class="btn-secondary btn-sm @(ViewBag.CommentSort == "popular" ? "active" : "")">Популярные</a>
             </div>
         </div>
         <form asp-action="AddComment" method="post" class="mb-4 modern-form">
@@ -113,9 +119,7 @@
                     </div>
                     <p class="comment-text">@comment.Text</p>
                     <div class="comment-actions">
-                        <button type="button" class="btn-like @(comment.LikedByCurrentUser ? "liked" : "")"
-                                data-comment-id="@comment.Id"
-                                onclick="toggleLike(this, @comment.Id)">
+                        <button type="button" class="btn-like @(comment.LikedByCurrentUser ? "liked" : "")" data-comment-id="@comment.Id" onclick="toggleLike(this, @comment.Id)">
                             <i class="fas fa-thumbs-up"></i> @comment.LikeCount
                         </button>
                         @if (User.IsInRole("Admin"))
@@ -124,9 +128,7 @@
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="commentId" value="@comment.Id" />
                                 <input type="hidden" name="movieId" value="@Model.Id" />
-                                <button type="submit" class="btn-danger btn-sm" onclick="return confirm('Удалить комментарий?')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <button type="submit" class="btn-danger btn-sm" onclick="return confirm('Удалить комментарий?')"><i class="fas fa-trash"></i></button>
                             </form>
                         }
                     </div>
@@ -141,6 +143,24 @@
 (() => {
     const section = document.getElementById('playerSection');
     if (!section) return;
+
+    const normalizeTrailerUrl = (url) => {
+        if (!url) return '';
+        try {
+            const parsed = new URL(url, window.location.origin);
+            if (parsed.hostname.includes('youtube.com') && parsed.searchParams.get('v')) {
+                return `https://www.youtube.com/embed/${parsed.searchParams.get('v')}?autoplay=1`;
+            }
+            if (parsed.hostname.includes('youtu.be')) {
+                const id = parsed.pathname.replace('/', '').trim();
+                return id ? `https://www.youtube.com/embed/${id}?autoplay=1` : url;
+            }
+            return url;
+        } catch {
+            return url;
+        }
+    };
+
     const showMovieBtn = document.getElementById('showMovieBtn');
     const showTrailerBtn = document.getElementById('showTrailerBtn');
     const movieBlock = document.getElementById('moviePlayerBlock');
@@ -149,17 +169,14 @@
     const trailerFrame = document.getElementById('trailerFrame');
     const primaryMovieUrl = section.dataset.movieUrl || '';
     const fallbackMovieUrl = section.dataset.fallbackUrl || '';
-    const trailerUrl = section.dataset.trailerUrl || '';
+    const trailerUrl = normalizeTrailerUrl(section.dataset.trailerUrl || '');
     let fallbackApplied = false;
 
     const switchMode = (mode) => {
         if (movieBlock) movieBlock.classList.toggle('d-none', mode !== 'movie');
         if (trailerBlock) trailerBlock.classList.toggle('d-none', mode !== 'trailer');
         if (mode === 'movie' && movieFrame && !movieFrame.src && primaryMovieUrl) movieFrame.src = primaryMovieUrl;
-        if (mode === 'trailer' && trailerFrame) {
-            if (!trailerFrame.src && trailerUrl) trailerFrame.src = trailerUrl;
-            if (window.YT && typeof window.YT.Player === 'function') { /* YouTube API available in trailer mode only */ }
-        }
+        if (mode === 'trailer' && trailerFrame && trailerUrl) trailerFrame.src = trailerUrl;
     };
 
     if (movieFrame) {
@@ -169,50 +186,11 @@
                 movieFrame.src = fallbackMovieUrl;
             }
         });
-        if (primaryMovieUrl && fallbackMovieUrl) {
-            setTimeout(() => {
-                if (!fallbackApplied && movieFrame.src === primaryMovieUrl) {
-                    fallbackApplied = true;
-                    movieFrame.src = fallbackMovieUrl;
-                }
-            }, 5000);
-        }
     }
+
     if (showMovieBtn) showMovieBtn.addEventListener('click', () => switchMode('movie'));
     if (showTrailerBtn) showTrailerBtn.addEventListener('click', () => switchMode('trailer'));
     switchMode(section.dataset.initialMode || 'none');
 })();
-
-try {
-    // Rating stars
-    const starBtns = document.querySelectorAll('.star-btn');
-    const scoreInput = document.getElementById('ratingScore');
-    if (starBtns.length && scoreInput) {
-        starBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const val = parseInt(btn.dataset.value);
-                scoreInput.value = val;
-                starBtns.forEach(b => b.classList.toggle('active', parseInt(b.dataset.value) <= val));
-            });
-        });
-    }
-} catch {}
-
-// Like comment
-async function toggleLike(btn, commentId) {
-    try {
-        const token = document.querySelector('input[name="__RequestVerificationToken"]');
-        await fetch('@Url.Action("LikeComment", "Cinema")', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `commentId=${commentId}${token ? '&__RequestVerificationToken=' + encodeURIComponent(token.value) : ''}`
-        });
-        const isLiked = btn.classList.contains('liked');
-        const count = parseInt(btn.textContent.trim().split(/\s+/).pop()) || 0;
-        const newCount = isLiked ? Math.max(0, count - 1) : count + 1;
-        btn.className = isLiked ? 'btn-like' : 'btn-like liked';
-        btn.innerHTML = `<i class="fas fa-thumbs-up"></i> ${newCount}`;
-    } catch {}
-}
 </script>
 }
