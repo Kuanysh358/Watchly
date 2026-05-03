@@ -87,6 +87,8 @@ namespace Watchly.Web.Controllers
                 director = movie.Director,
                 genres = movie.Genres,
                 trailerUrl = string.IsNullOrWhiteSpace(videoId) ? null : _youtubeService.GetEmbedUrl(videoId),
+                videoUrl = $"https://vidsrc.to/embed/movie/{movie.Id}",
+                fallbackVideoUrl = $"https://vidsrc.me/embed/movie?tmdb={movie.Id}",
                 videoId
             });
         }
@@ -118,6 +120,9 @@ namespace Watchly.Web.Controllers
                 if (detail == null) continue;
 
                 var vidsrcUrl = $"https://vidsrc.to/embed/movie/{detail.Id}";
+                var fallbackVidsrcUrl = $"https://vidsrc.me/embed/movie?tmdb={detail.Id}";
+                var trailerVideoId = await _youtubeService.SearchTrailerAsync($"{detail.Title} {detail.ReleaseYear} trailer official");
+                var trailerUrl = string.IsNullOrWhiteSpace(trailerVideoId) ? null : _youtubeService.GetEmbedUrl(trailerVideoId);
 
                 // Check for existing movie and update VideoUrl if missing
                 var existing = await _db.Movies.Include(m => m.MovieGenres)
@@ -128,10 +133,15 @@ namespace Watchly.Web.Controllers
                     {
                         existing.VideoUrl = vidsrcUrl;
                         existing.UpdatedAt = DateTime.UtcNow;
-                        await _db.SaveChangesAsync();
                     }
+                    if (string.IsNullOrWhiteSpace(existing.TrailerUrl) && !string.IsNullOrWhiteSpace(trailerUrl))
+                    {
+                        existing.TrailerUrl = trailerUrl;
+                        existing.UpdatedAt = DateTime.UtcNow;
+                    }
+                    await _db.SaveChangesAsync();
                     importedTmdbIds.Add(detail.Id);
-                    imported.Add(new { title = detail.Title, releaseYear = detail.ReleaseYear, rating = detail.VoteAverage, videoUrl = vidsrcUrl, updated = true });
+                    imported.Add(new { title = detail.Title, releaseYear = detail.ReleaseYear, rating = detail.VoteAverage, videoUrl = vidsrcUrl, fallbackVideoUrl = fallbackVidsrcUrl, trailerUrl, updated = true });
                     importedCount++;
                     continue;
                 }
@@ -158,6 +168,7 @@ namespace Watchly.Web.Controllers
                     Rating = detail.VoteAverage,
                     PosterUrl = string.IsNullOrWhiteSpace(detail.PosterPath) ? null : $"https://image.tmdb.org/t/p/original{detail.PosterPath}",
                     VideoUrl = vidsrcUrl,
+                    TrailerUrl = trailerUrl,
                     TmdbId = detail.Id,
                     DurationMinutes = detail.Runtime,
                     Country = detail.Country,
@@ -169,7 +180,7 @@ namespace Watchly.Web.Controllers
                 if (!createdId.HasValue) continue;
 
                 importedTmdbIds.Add(detail.Id);
-                imported.Add(new { title = detail.Title, releaseYear = detail.ReleaseYear, rating = detail.VoteAverage, videoUrl = vidsrcUrl, updated = false });
+                imported.Add(new { title = detail.Title, releaseYear = detail.ReleaseYear, rating = detail.VoteAverage, videoUrl = vidsrcUrl, fallbackVideoUrl = fallbackVidsrcUrl, trailerUrl, updated = false });
                 importedCount++;
             }
 
