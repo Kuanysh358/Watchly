@@ -25,16 +25,23 @@ namespace Watchly.Web.Controllers
 
             var url = !string.IsNullOrWhiteSpace(movie.VideoUrl)
                 ? movie.VideoUrl!
-                : $"https://vidsrc.xyz/embed/movie/{movie.TmdbId!.Value}";
+                : $"https://vidsrc.to/embed/movie/{movie.TmdbId!.Value}";
+
+            var isIframe = IsEmbedUrl(url);
 
             return View(new VideoPlayerViewModel
             {
                 MovieId = movie.Id,
                 Title = movie.Title,
                 StreamUrl = url,
-                IsIframe = string.IsNullOrWhiteSpace(movie.VideoUrl),
+                IsIframe = isIframe,
                 ResumePositionSeconds = movie.ResumePositionSeconds
             });
         }
+
+        private static bool IsEmbedUrl(string url) =>
+            url.Contains("vidsrc", StringComparison.OrdinalIgnoreCase) ||
+            url.Contains("embed", StringComparison.OrdinalIgnoreCase) ||
+            url.Contains("youtube.com/embed", StringComparison.OrdinalIgnoreCase);
     }
 }
