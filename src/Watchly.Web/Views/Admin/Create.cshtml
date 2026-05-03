@@ -199,7 +199,7 @@
             $('#Director').val(data.director || '');
 
             if (data.posterPath) {
-                $('#PosterUrl').val('https://image.tmdb.org/t/p/w500' + data.posterPath);
+                $('#PosterUrl').val('https://image.tmdb.org/t/p/original' + data.posterPath);
             }
 
             if (data.trailerUrl) {

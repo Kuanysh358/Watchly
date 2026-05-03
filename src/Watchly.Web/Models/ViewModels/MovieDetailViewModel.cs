@@ -10,6 +10,7 @@ namespace Watchly.Web.Models.ViewModels
         public string? PosterUrl { get; set; }
         public string? TrailerUrl { get; set; }
         public string? VideoUrl { get; set; }
+        public int? TmdbId { get; set; }
         public int ResumePositionSeconds { get; set; }
         public double UserWatchedHours { get; set; }
         public int UserRating { get; set; }

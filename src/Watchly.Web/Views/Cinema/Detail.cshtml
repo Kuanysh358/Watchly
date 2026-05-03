@@ -21,6 +21,7 @@
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <div class="d-flex gap-2 flex-wrap mt-3">
+                    <a class="btn-primary" asp-controller="Video" asp-action="Play" asp-route-movieId="@Model.Id"><i class="fas fa-play"></i> Смотреть</a>
                     <form asp-action="ToggleWatchlist" method="post">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="movieId" value="@Model.Id" />
