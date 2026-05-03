@@ -87,6 +87,8 @@ namespace Watchly.Web.Controllers
                 director = movie.Director,
                 genres = movie.Genres,
                 trailerUrl = string.IsNullOrWhiteSpace(videoId) ? null : _youtubeService.GetEmbedUrl(videoId),
+                videoUrl = $"https://vidsrc.to/embed/movie/{movie.Id}",
+                fallbackVideoUrl = $"https://vidsrc.me/embed/movie?tmdb={movie.Id}",
                 videoId
             });
         }
@@ -118,6 +120,7 @@ namespace Watchly.Web.Controllers
                 if (detail == null) continue;
 
                 var vidsrcUrl = $"https://vidsrc.to/embed/movie/{detail.Id}";
+                var fallbackVidsrcUrl = $"https://vidsrc.me/embed/movie?tmdb={detail.Id}";
 
                 // Check for existing movie and update VideoUrl if missing
                 var existing = await _db.Movies.Include(m => m.MovieGenres)
@@ -131,7 +134,7 @@ namespace Watchly.Web.Controllers
                         await _db.SaveChangesAsync();
                     }
                     importedTmdbIds.Add(detail.Id);
-                    imported.Add(new { title = detail.Title, releaseYear = detail.ReleaseYear, rating = detail.VoteAverage, videoUrl = vidsrcUrl, updated = true });
+                    imported.Add(new { title = detail.Title, releaseYear = detail.ReleaseYear, rating = detail.VoteAverage, videoUrl = vidsrcUrl, fallbackVideoUrl = fallbackVidsrcUrl, updated = true });
                     importedCount++;
                     continue;
                 }
@@ -169,7 +172,7 @@ namespace Watchly.Web.Controllers
                 if (!createdId.HasValue) continue;
 
                 importedTmdbIds.Add(detail.Id);
-                imported.Add(new { title = detail.Title, releaseYear = detail.ReleaseYear, rating = detail.VoteAverage, videoUrl = vidsrcUrl, updated = false });
+                imported.Add(new { title = detail.Title, releaseYear = detail.ReleaseYear, rating = detail.VoteAverage, videoUrl = vidsrcUrl, fallbackVideoUrl = fallbackVidsrcUrl, updated = false });
                 importedCount++;
             }
 
