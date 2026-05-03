@@ -34,6 +34,15 @@ namespace Watchly.Web.Controllers
             return Redirect(string.IsNullOrWhiteSpace(returnUrl) ? Url.Action("Index")! : returnUrl);
         }
 
+
+        [HttpGet]
+        public async Task<IActionResult> Search(string query)
+        {
+            var filter = new MovieFilterViewModel { SearchQuery = query, PageSize = 10, PageNumber = 1 };
+            var data = await _movieService.GetMoviesAsync(filter, null);
+            return Json(data.Movies.Select(m => new { id = m.Id, title = m.Title, posterUrl = m.PosterUrl, rating = m.Rating, releaseYear = m.ReleaseYear }));
+        }
+
         public IActionResult Privacy() => View();
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

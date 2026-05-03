@@ -128,7 +128,7 @@ namespace Watchly.Web.Controllers
                     Description = detail.Overview,
                     ReleaseYear = detail.ReleaseYear ?? DateTime.UtcNow.Year,
                     Rating = detail.VoteAverage,
-                    PosterUrl = string.IsNullOrWhiteSpace(detail.PosterPath) ? null : $"https://image.tmdb.org/t/p/w500{detail.PosterPath}",
+                    PosterUrl = string.IsNullOrWhiteSpace(detail.PosterPath) ? null : $"https://image.tmdb.org/t/p/original{detail.PosterPath}",
                     TrailerUrl = string.IsNullOrWhiteSpace(videoId) ? null : _youtubeService.GetEmbedUrl(videoId),
                     TmdbId = detail.Id,
                     DurationMinutes = detail.Runtime,

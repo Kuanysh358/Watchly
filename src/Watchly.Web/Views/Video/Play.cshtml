@@ -1,0 +1,43 @@
+@model Watchly.Web.Models.ViewModels.VideoPlayerViewModel
+@{ ViewData["Title"] = $"Просмотр: {Model.Title}"; }
+
+<section class="player-section mb-4">
+    <h2 class="section-title">@Model.Title</h2>
+    <div class="video-player-wrap">
+        @if (Model.IsIframe)
+        {
+            <iframe class="trailer-player" src="@Model.StreamUrl" allowfullscreen referrerpolicy="origin"></iframe>
+        }
+        else
+        {
+            <video id="watchlyPlayer" controls style="width:100%;max-height:75vh;background:#000;border-radius:12px;" preload="metadata">
+                <source src="@Model.StreamUrl" />
+            </video>
+        }
+    </div>
+</section>
+
+@section Scripts {
+<script>
+(() => {
+    const player = document.getElementById('watchlyPlayer');
+    if (!player) return;
+    const initialResume = @Model.ResumePositionSeconds;
+    if (initialResume > 0) player.currentTime = initialResume;
+    const movieId = @Model.MovieId;
+    let lastSent = 0;
+    const save = async () => {
+        const current = Math.floor(player.currentTime || 0);
+        if (current - lastSent < 15) return;
+        lastSent = current;
+        await fetch('@Url.Action("SaveResume", "Cinema")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `movieId=${movieId}&positionSeconds=${current}`
+        });
+    };
+    player.addEventListener('timeupdate', save);
+    window.addEventListener('beforeunload', save);
+})();
+</script>
+}

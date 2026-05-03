@@ -39,8 +39,9 @@ namespace Watchly.Web.Services
             var all = await _movieRepository.GetAllAsync();
             return new HomeIndexViewModel
             {
-                Popular = all.OrderByDescending(m => m.Rating).Take(8).Select(m => MapCard(m)).ToList(),
-                NewReleases = all.OrderByDescending(m => m.ReleaseYear).ThenByDescending(m => m.CreatedAt).Take(8).Select(m => MapCard(m)).ToList(),
+                Popular = all.OrderByDescending(m => m.Rating).ThenByDescending(m => m.CreatedAt).Take(8).Select(m => MapCard(m)).ToList(),
+                NewReleases = all.OrderByDescending(m => m.ReleaseYear).ThenByDescending(m => m.CreatedAt).Where(m => m.ReleaseYear >= DateTime.UtcNow.Year - 1).Take(8).Select(m => MapCard(m)).ToList(),
+                Recommended = all.OrderByDescending(m => m.Comments.Count).ThenByDescending(m => m.Rating).Take(8).Select(m => MapCard(m)).ToList(),
                 ByGenres = all.SelectMany(m => m.MovieGenres.Select(g => new { m, g.Genre.Name }))
                     .GroupBy(x => x.Name)
                     .OrderByDescending(g => g.Count())
@@ -84,6 +85,7 @@ namespace Watchly.Web.Services
                 PosterUrl = movie.PosterUrl,
                 TrailerUrl = movie.TrailerUrl,
                 VideoUrl = movie.VideoUrl,
+                TmdbId = movie.TmdbId,
                 DurationMinutes = movie.DurationMinutes,
                 Country = movie.Country,
                 Director = movie.Director,
@@ -120,6 +122,7 @@ namespace Watchly.Web.Services
                 PosterUrl = movie.PosterUrl,
                 TrailerUrl = movie.TrailerUrl,
                 VideoUrl = movie.VideoUrl,
+                TmdbId = movie.TmdbId,
                 TmdbId = movie.TmdbId,
                 DurationMinutes = movie.DurationMinutes,
                 Country = movie.Country,
@@ -307,11 +310,17 @@ namespace Watchly.Web.Services
             .Include(v => v.Movie).ThenInclude(m => m.MovieGenres).ThenInclude(mg => mg.Genre)
             .OrderByDescending(v => v.LastViewedAt).Select(v => MapCard(v.Movie)).ToListAsync();
 
+        private static string? ToHighResTmdbImage(string? imageUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl)) return imageUrl;
+            return imageUrl.Replace("/t/p/w500", "/t/p/original", StringComparison.OrdinalIgnoreCase);
+        }
+
         private static MovieCardViewModel MapCard(Movie m, bool inWatchlist = false) => new()
         {
             Id = m.Id,
             Title = m.Title,
-            PosterUrl = m.PosterUrl,
+            PosterUrl = ToHighResTmdbImage(m.PosterUrl),
             ReleaseYear = m.ReleaseYear,
             Rating = m.Rating,
             Genres = m.MovieGenres.Select(mg => mg.Genre.Name).ToList(),
