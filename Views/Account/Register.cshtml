@@ -1,0 +1,59 @@
+@model Watchly.Web.Models.ViewModels.RegisterViewModel
+@{ ViewData["Title"] = "Регистрация"; }
+
+<div class="auth-container">
+    <div class="auth-card">
+        <h2><i class="fas fa-user-plus" style="color:var(--accent)"></i> Регистрация</h2>
+        <p class="auth-subtitle">Создайте аккаунт Watchly бесплатно</p>
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-error mb-3"></div>
+
+        <form asp-action="Register" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+
+            <div class="mb-3">
+                <label asp-for="FullName" class="form-label">Имя</label>
+                <input asp-for="FullName" class="form-control" placeholder="Иван Иванов" autocomplete="name" />
+                <span asp-validation-for="FullName" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label">Имя пользователя</label>
+                <input asp-for="Username" class="form-control" placeholder="username" autocomplete="username" />
+                <span asp-validation-for="Username" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label">Email</label>
+                <input asp-for="Email" type="email" class="form-control" placeholder="email@example.com" autocomplete="email" />
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label">Пароль</label>
+                <input asp-for="Password" type="password" class="form-control" placeholder="Минимум 8 символов, 1 заглавная, 1 цифра" autocomplete="new-password" />
+                <span asp-validation-for="Password" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="ConfirmPassword" class="form-label">Подтверждение пароля</label>
+                <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="Повторите пароль" autocomplete="new-password" />
+                <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+            </div>
+
+            <button type="submit" class="btn-primary w-100"><i class="fas fa-user-plus"></i> Создать аккаунт</button>
+        </form>
+
+        <hr class="my-4" style="border-color:var(--border)" />
+
+        <div class="text-center">
+            <span class="text-muted">Уже есть аккаунт?</span>
+            <a asp-action="Login" class="btn-secondary btn-sm ms-2">
+                <i class="fas fa-sign-in-alt"></i> Войти
+            </a>
+        </div>
+    </div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

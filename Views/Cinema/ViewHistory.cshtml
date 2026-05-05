@@ -1,0 +1,34 @@
+@model IEnumerable<Watchly.Web.Models.ViewModels.MovieCardViewModel>
+@{ ViewData["Title"] = "История просмотров"; }
+
+<div class="catalog-header">
+    <h2><i class="fas fa-history"></i> История просмотров</h2>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <i class="fas fa-film fa-3x mb-3"></i>
+        <p>Вы ещё не смотрели фильмы.</p>
+    </div>
+}
+else
+{
+    <div class="movie-grid">
+        @foreach (var movie in Model)
+        {
+            <article class="movie-card movie-card-rich">
+                <a asp-action="Detail" asp-route-id="@movie.Id" class="movie-card-link">
+                    <img src="@(string.IsNullOrWhiteSpace(movie.PosterUrl) ? "https://via.placeholder.com/250x360?text=No+Poster" : movie.PosterUrl)" alt="@movie.Title" />
+                    <div class="movie-card-info">
+                        <h3 class="movie-card-title">@movie.Title</h3>
+                        <div class="movie-card-meta">
+                            <span class="movie-year">@movie.ReleaseYear</span>
+                            <span class="movie-rating"><i class="fas fa-star"></i> @movie.Rating</span>
+                        </div>
+                    </div>
+                </a>
+            </article>
+        }
+    </div>
+}

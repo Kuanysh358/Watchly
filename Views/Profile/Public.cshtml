@@ -1,0 +1,148 @@
+@model Watchly.Web.Models.ViewModels.UserProfileViewModel
+@{ ViewData["Title"] = "Профиль пользователя"; }
+
+<div class="profile-layout">
+    <div class="profile-edit-col">
+        <div class="form-card">
+            <div class="profile-avatar-wrap">
+                @if (!string.IsNullOrWhiteSpace(Model.AvatarUrl))
+                {
+                    <img src="@Model.AvatarUrl" alt="Аватар" class="profile-avatar-img" />
+                }
+                else
+                {
+                    <div class="profile-avatar-placeholder"><i class="fas fa-user-circle fa-4x"></i></div>
+                }
+            </div>
+            <h2 class="text-center mb-1">@(!string.IsNullOrWhiteSpace(Model.FullName) ? Model.FullName : Model.UserName)</h2>
+            <p class="text-center text-muted mb-2">@Model.UserName</p>
+            <p class="text-center text-muted mb-3">На сайте с @Model.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</p>
+
+            <div class="friend-actions justify-content-center">
+                @if (Model.Relationship?.IsFriend == true)
+                {
+                    <a class="btn-primary btn-sm" asp-action="Chat" asp-route-id="@Model.UserId">Написать сообщение</a>
+                    <button class="btn-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#sendMovieModal">Отправить фильм</button>
+                    <form asp-action="RemoveFriend" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="userId" value="@Model.UserId" />
+                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                        <button class="btn-danger btn-sm" type="submit">Удалить из друзей</button>
+                    </form>
+                }
+                else if (Model.Relationship?.IsIncomingRequest == true)
+                {
+                    <form asp-action="AcceptFriendRequest" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="userId" value="@Model.UserId" />
+                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                        <button class="btn-primary btn-sm" type="submit">Принять</button>
+                    </form>
+                    <form asp-action="DeclineFriendRequest" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="userId" value="@Model.UserId" />
+                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                        <button class="btn-danger btn-sm" type="submit">Отклонить</button>
+                    </form>
+                }
+                else if (Model.Relationship?.IsOutgoingRequest == true)
+                {
+                    <span class="text-muted small">Запрос отправлен</span>
+                }
+                else
+                {
+                    <form asp-action="SendFriendRequest" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="userId" value="@Model.UserId" />
+                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                        <button class="btn-primary btn-sm" type="submit">Добавить в друзья</button>
+                    </form>
+                }
+            </div>
+        </div>
+
+        <div class="form-card mt-3">
+            <h4><i class="fas fa-chart-bar"></i> Статистика</h4>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-value">@Model.ViewedMoviesCount</span>
+                    <span class="stat-label">Просмотрено фильмов</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">@Model.FriendsCount</span>
+                    <span class="stat-label">Друзей</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">@Model.AverageRating.ToString("0.0")</span>
+                    <span class="stat-label">Средняя оценка</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="profile-info-col">
+        <div class="profile-section">
+            <h4><i class="fas fa-history"></i> Просмотрено недавно</h4>
+            @if (Model.RecentViews.Any())
+            {
+                <div class="history-list">
+                    @foreach (var item in Model.RecentViews)
+                    {
+                        <div class="history-item">
+                            @if (!string.IsNullOrWhiteSpace(item.PosterUrl))
+                            {
+                                <img src="@item.PosterUrl" alt="@item.Title" class="history-poster" />
+                            }
+                            <div class="history-info">
+                                <a asp-controller="Cinema" asp-action="Detail" asp-route-id="@item.MovieId" class="history-title">@item.Title</a>
+                                <span class="text-muted small">@item.ViewedAt.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">История просмотров пуста.</p>
+            }
+        </div>
+    </div>
+</div>
+
+@if (Model.Relationship?.IsFriend == true)
+{
+    <div class="modal fade" id="sendMovieModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header">
+                    <h5 class="modal-title">Отправить фильм</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form asp-action="SendMessage" method="post">
+                    <div class="modal-body">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="friendId" value="@Model.UserId" />
+                        <div class="mb-3">
+                            <label class="form-label">Фильм</label>
+                            <select class="form-select" name="movieId" required>
+                                <option value="">Выберите фильм</option>
+                                @foreach (var movie in Model.AvailableMovies)
+                                {
+                                    <option value="@movie.Id">@movie.Title</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Сообщение</label>
+                            <textarea class="form-control" name="text" rows="3" placeholder="Комментарий к фильму"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" type="button" data-bs-dismiss="modal">Отмена</button>
+                        <button class="btn-primary" type="submit">Отправить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
