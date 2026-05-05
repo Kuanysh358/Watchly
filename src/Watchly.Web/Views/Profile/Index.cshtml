@@ -18,7 +18,7 @@
     <div class="profile-edit-col">
         <div class="form-card">
             <div class="profile-avatar-wrap">
-                <img src="@Model.AvatarUrl" alt="@(isKz ? "Аватар" : "Аватар")" class="profile-avatar-img @(string.IsNullOrWhiteSpace(Model.AvatarUrl) ? "d-none" : "")" id="profileAvatar" />
+                <img src="@Model.AvatarUrl" alt="Аватар" class="profile-avatar-img @(string.IsNullOrWhiteSpace(Model.AvatarUrl) ? "d-none" : "")" id="profileAvatar" />
                 <div class="profile-avatar-placeholder @(string.IsNullOrWhiteSpace(Model.AvatarUrl) ? "" : "d-none")" id="profileAvatarPlaceholder">
                     <i class="fas fa-user-circle fa-4x"></i>
                 </div>
@@ -32,7 +32,7 @@
         </div>
 
         <div class="form-card">
-            <h4><i class="fas fa-chart-bar"></i> @(isKz ? "Статистика" : "Статистика")</h4>
+            <h4><i class="fas fa-chart-bar"></i> Статистика</h4>
             <div class="stats-grid">
                 <div class="stat-item">
                     <span class="stat-value">@Model.ViewedMoviesCount</span>
@@ -276,7 +276,7 @@
                 <div class="modal-body">
                     @Html.AntiForgeryToken()
                     <div class="mb-3">
-                        <label class="form-label">@(isKz ? "Никнейм" : "Никнейм")</label>
+                        <label class="form-label">Никнейм</label>
                         <input name="UserName" value="@Model.EditProfile?.UserName" class="form-control" />
                     </div>
                     <div class="mb-3">
@@ -381,7 +381,7 @@
                 const fullName = user.fullName ? `<div class="friend-sub text-muted">${user.fullName}</div>` : '';
                 let actions = '';
                 if (user.isFriend) {
-                    actions = `<a class="btn-secondary btn-sm" href="/Profile/Public/${user.userId}">${isKz ? 'Профиль' : 'Профиль'}</a>`;
+                    actions = `<a class="btn-secondary btn-sm" href="/Profile/Public/${user.userId}">Профиль</a>`;
                 } else if (user.isIncomingRequest) {
                     actions = `
                         <form method="post" action="/Profile/AcceptFriendRequest">

@@ -72,7 +72,7 @@ namespace Watchly.Web.Controllers
                     senderAvatar = (string?)null,
                     text = joinText,
                     imageUrl = (string?)null,
-                    createdAt = DateTime.UtcNow.ToLocalTime().ToString("dd.MM.yyyy HH:mm"),
+                    createdAtUtc = DateTime.UtcNow.ToString("o"),
                     isSystemMessage = true,
                     senderId = currentUserId
                 });
@@ -197,7 +197,7 @@ namespace Watchly.Web.Controllers
                 senderAvatar = sender?.AvatarUrl,
                 text = message.Text,
                 imageUrl = message.ImageUrl,
-                createdAt = message.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm"),
+                createdAtUtc = message.CreatedAt.ToString("o"),
                 isSystemMessage = false,
                 senderId = currentUserId
             });
