@@ -2,6 +2,13 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Watchly.Web.Models.DataModels
 {
+    public enum DiscussionRoomStatus
+    {
+        Pending = 0,
+        Active = 1,
+        Closed = 2
+    }
+
     public class DiscussionRoom
     {
         public int Id { get; set; }
@@ -15,6 +22,10 @@ namespace Watchly.Web.Models.DataModels
         public string FriendUserId { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public DiscussionRoomStatus Status { get; set; } = DiscussionRoomStatus.Pending;
+
+        public DateTime? ClosedAt { get; set; }
 
         public Movie Movie { get; set; } = null!;
         public ApplicationUser CreatedByUser { get; set; } = null!;

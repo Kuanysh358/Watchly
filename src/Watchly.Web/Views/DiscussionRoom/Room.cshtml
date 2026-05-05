@@ -1,9 +1,9 @@
 @model Watchly.Web.Models.ViewModels.DiscussionRoomViewModel
-@{ ViewData["Title"] = "Комната обсуждения"; }
+@{ ViewData["Title"] = "Талқылау бөлмесі"; }
 
 <div class="chat-shell">
     <div class="chat-header">
-        <a class="btn-secondary btn-sm" asp-controller="Cinema" asp-action="Detail" asp-route-id="@Model.MovieId">К фильму</a>
+        <a class="btn-secondary btn-sm" asp-controller="Cinema" asp-action="Detail" asp-route-id="@Model.MovieId">Фильмге өту</a>
         <div class="chat-user">
             @if (!string.IsNullOrWhiteSpace(Model.FriendAvatarUrl))
             {
@@ -11,46 +11,45 @@
             }
             <div>
                 <div class="friend-name">@Model.FriendName</div>
-                <div class="text-muted small">Комната по фильму: @Model.MovieTitle</div>
+                <div class="text-muted small">Бөлме: @Model.MovieTitle</div>
             </div>
         </div>
     </div>
 
-    <div class="detail-panel mb-3 d-flex gap-3 align-items-center">
-        @if (!string.IsNullOrWhiteSpace(Model.MoviePosterUrl))
+    @if (Model.IsPending)
+    {
+        <div class="alert alert-warning">Шақыру жіберілді. Досыңыз қосылғаннан кейін чат ашылады.</div>
+        @if (!Model.IsInitiator)
         {
-            <img src="@Model.MoviePosterUrl" alt="@Model.MovieTitle" style="width:64px;height:96px;object-fit:cover;border-radius:8px;" />
+            <form asp-action="Join" method="post" class="mb-3">@Html.AntiForgeryToken()<input type="hidden" name="roomId" value="@Model.RoomId" /><button class="btn-primary" type="submit">Бөлмеге қосылу</button></form>
         }
-        <div>
-            <strong>@Model.MovieTitle</strong>
-            <div><a asp-controller="Cinema" asp-action="Detail" asp-route-id="@Model.MovieId">Открыть фильм</a></div>
-        </div>
-    </div>
+    }
+
+    @if (Model.IsActive)
+    {
+        <form asp-action="Close" method="post" class="mb-2">@Html.AntiForgeryToken()<input type="hidden" name="roomId" value="@Model.RoomId" /><button class="btn-danger btn-sm" type="submit">Бөлмені жабу</button></form>
+    }
+
+    @if (Model.IsClosed)
+    {
+        <div class="alert alert-secondary">Бұл бөлме жабық.</div>
+    }
 
     <div class="chat-messages">
         @foreach (var message in Model.Messages)
         {
-            <div class="chat-message @(message.IsOwn ? "own" : "other")">
-                <div class="chat-bubble">
-                    @if (!string.IsNullOrWhiteSpace(message.Text))
-                    {
-                        <p>@message.Text</p>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(message.ImageUrl))
-                    {
-                        <img src="@message.ImageUrl" alt="Фото" style="max-width:220px;border-radius:10px;display:block;margin-top:8px;" />
-                    }
-                    <span class="chat-time">@message.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
-                </div>
-            </div>
+            <div class="chat-message @(message.IsOwn ? "own" : "other")"><div class="chat-bubble">@if (!string.IsNullOrWhiteSpace(message.Text)){<p>@message.Text</p>}<span class="chat-time">@message.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span></div></div>
         }
     </div>
 
-    <form class="chat-input" asp-action="SendMessage" method="post" enctype="multipart/form-data">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="roomId" value="@Model.RoomId" />
-        <input class="form-control" name="text" placeholder="Сообщение о фильме..." autocomplete="off" />
-        <input type="file" class="form-control" name="image" accept="image/*" />
-        <button class="btn-primary" type="submit">Отправить</button>
-    </form>
+    @if (Model.IsActive)
+    {
+        <form class="chat-input" asp-action="SendMessage" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="roomId" value="@Model.RoomId" />
+            <input class="form-control" name="text" placeholder="Хабарлама..." autocomplete="off" />
+            <input type="file" class="form-control" name="image" accept="image/*" />
+            <button class="btn-primary" type="submit">Жіберу</button>
+        </form>
+    }
 </div>

@@ -419,6 +419,54 @@ namespace Watchly.Web.Controllers
                     IsOutgoingRequest = true
                 }).ToList();
 
+                vm.DiscussionRoomHistory = await _context.DiscussionRooms
+                    .Where(r => r.CreatedByUserId == profileUser.Id || r.FriendUserId == profileUser.Id)
+                    .Include(r => r.Movie)
+                    .Include(r => r.CreatedByUser)
+                    .Include(r => r.FriendUser)
+                    .Include(r => r.Messages)
+                    .OrderByDescending(r => r.CreatedAt)
+                    .Take(20)
+                    .Select(r => new DiscussionRoomHistoryItemViewModel
+                    {
+                        RoomId = r.Id,
+                        MovieId = r.MovieId,
+                        MovieTitle = r.Movie.Title,
+                        FriendName = r.CreatedByUserId == profileUser.Id
+                            ? (r.FriendUser.FullName ?? r.FriendUser.UserName ?? "User")
+                            : (r.CreatedByUser.FullName ?? r.CreatedByUser.UserName ?? "User"),
+                        CreatedAt = r.CreatedAt,
+                        MessagesCount = r.Messages.Count,
+                        IsClosed = r.Status == DiscussionRoomStatus.Closed
+                    }).ToListAsync();
+
+
+                var directMessages = await _context.DirectMessages
+                    .Where(m => m.SenderId == profileUser.Id || m.RecipientId == profileUser.Id)
+                    .Include(m => m.Sender)
+                    .Include(m => m.Recipient)
+                    .OrderByDescending(m => m.CreatedAt)
+                    .ToListAsync();
+
+                vm.DirectChatHistory = directMessages
+                    .GroupBy(m => m.SenderId == profileUser.Id ? m.RecipientId : m.SenderId)
+                    .Select(g =>
+                    {
+                        var last = g.OrderByDescending(x => x.CreatedAt).First();
+                        var friend = last.SenderId == profileUser.Id ? last.Recipient : last.Sender;
+                        return new DirectChatHistoryItemViewModel
+                        {
+                            FriendId = friend.Id,
+                            FriendName = friend.FullName ?? friend.UserName ?? "User",
+                            LastMessageAt = last.CreatedAt,
+                            MessagesCount = g.Count(),
+                            LastText = string.IsNullOrWhiteSpace(last.Text) ? "[Фильм]" : last.Text
+                        };
+                    })
+                    .OrderByDescending(x => x.LastMessageAt)
+                    .Take(20)
+                    .ToList();
+
                 vm.EditProfile = new ProfileEditViewModel
                 {
                     UserName = profileUser.UserName ?? string.Empty,
