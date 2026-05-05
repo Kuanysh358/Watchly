@@ -83,6 +83,7 @@ namespace Watchly.Web.Services
                 ReleaseYear = movie.ReleaseYear,
                 Rating = movie.Rating,
                 PosterUrl = movie.PosterUrl,
+                BackdropUrl = movie.PosterUrl,
                 TrailerUrl = movie.TrailerUrl,
                 VideoUrl = movie.VideoUrl,
                 TmdbId = movie.TmdbId,
