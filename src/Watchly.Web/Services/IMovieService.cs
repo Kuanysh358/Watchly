@@ -16,9 +16,10 @@ namespace Watchly.Web.Services
         Task<IEnumerable<MovieCardViewModel>> GetWatchlistAsync(string userId);
         Task<IEnumerable<MovieCardViewModel>> GetViewHistoryAsync(string userId);
         Task<HomeIndexViewModel> GetHomeDataAsync(string? userId);
-        Task AddCommentAsync(int movieId, string userId, string text);
+        Task AddCommentAsync(int movieId, string userId, string text, int? parentCommentId = null);
         Task DeleteCommentAsync(int commentId);
         Task ToggleCommentLikeAsync(int commentId, string userId);
+        Task ToggleCommentDislikeAsync(int commentId, string userId);
         Task SetRatingAsync(int movieId, string userId, int score);
     }
 }

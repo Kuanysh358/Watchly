@@ -32,10 +32,10 @@ namespace Watchly.Web.Controllers
         }
 
         [Authorize, HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddComment(int movieId, string text)
+        public async Task<IActionResult> AddComment(int movieId, string text, int? parentCommentId)
         {
             if (!string.IsNullOrWhiteSpace(text))
-                await _movieService.AddCommentAsync(movieId, User.FindFirstValue(ClaimTypes.NameIdentifier)!, text);
+                await _movieService.AddCommentAsync(movieId, User.FindFirstValue(ClaimTypes.NameIdentifier)!, text, parentCommentId);
             return RedirectToAction(nameof(Detail), new { id = movieId });
         }
 
@@ -50,6 +50,13 @@ namespace Watchly.Web.Controllers
         public async Task<IActionResult> LikeComment(int commentId)
         {
             await _movieService.ToggleCommentLikeAsync(commentId, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            return Ok();
+        }
+
+        [Authorize, HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> DislikeComment(int commentId)
+        {
+            await _movieService.ToggleCommentDislikeAsync(commentId, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             return Ok();
         }
 

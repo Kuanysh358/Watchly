@@ -84,4 +84,22 @@ public class ValidationTests
         var result = validator.Validate(new MovieCreateEditViewModel { Title = "Movie", ReleaseYear = 1800, Rating = 8m });
         Assert.False(result.IsValid);
     }
+    [Fact]
+    public void MovieValidator_RelativeVideoUrl_Passes()
+    {
+        var validator = new MovieCreateEditViewModelValidator();
+        var result = validator.Validate(new MovieCreateEditViewModel { Title = "Movie", ReleaseYear = 2020, Rating = 8m, VideoUrl = "/videos/vid1.mp4" });
+        Assert.True(result.IsValid);
+    }
+
+
+    [Fact]
+    public void MovieValidator_WwwrootVideoPath_Passes()
+    {
+        var validator = new MovieCreateEditViewModelValidator();
+        var result = validator.Validate(new MovieCreateEditViewModel { Title = "Movie", ReleaseYear = 2020, Rating = 8m, VideoUrl = "src/Watchly.Web/wwwroot/videos/vid1.mp4" });
+        Assert.True(result.IsValid);
+    }
+
+
 }

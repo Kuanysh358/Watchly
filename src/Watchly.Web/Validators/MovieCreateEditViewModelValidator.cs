@@ -25,6 +25,14 @@ namespace Watchly.Web.Validators
                 .Must(url => string.IsNullOrEmpty(url) || Uri.TryCreate(url, UriKind.Absolute, out _))
                 .WithMessage("Некорректный URL трейлера");
 
+
+            RuleFor(x => x.VideoUrl)
+                .Must(url => string.IsNullOrWhiteSpace(url)
+                    || Uri.TryCreate(url, UriKind.Absolute, out _)
+                    || (url.StartsWith('/') && !url.StartsWith("//"))
+                    || url.Contains("wwwroot/videos/", StringComparison.OrdinalIgnoreCase))
+                .WithMessage("Некорректный URL видео/плеера");
+
             RuleFor(x => x.DurationMinutes)
                 .InclusiveBetween(1, 1000).When(x => x.DurationMinutes.HasValue)
                 .WithMessage("Продолжительность должна быть между 1 и 1000 минут");

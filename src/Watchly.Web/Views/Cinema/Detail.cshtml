@@ -123,8 +123,12 @@
                     <p class="comment-text">@comment.Text</p>
                     <div class="comment-actions">
                         <button type="button" class="btn-like @(comment.LikedByCurrentUser ? "liked" : "")" data-comment-id="@comment.Id" onclick="toggleLike(this, @comment.Id)">
-                            <i class="fas fa-thumbs-up"></i> @comment.LikeCount
+                            <i class="fas fa-thumbs-up"></i> <span>@comment.LikeCount</span>
                         </button>
+                        <button type="button" class="btn-like @(comment.DislikedByCurrentUser ? "liked" : "")" data-comment-id="@comment.Id" onclick="toggleDislike(this, @comment.Id)">
+                            <i class="fas fa-thumbs-down"></i> <span>@comment.DislikeCount</span>
+                        </button>
+                        <button type="button" class="btn-secondary btn-sm" onclick="toggleReplyForm(@comment.Id)"><i class="fas fa-reply"></i> Ответить</button>
                         @if (User.IsInRole("Admin"))
                         {
                             <form asp-action="DeleteComment" method="post" style="display:inline">
@@ -135,6 +139,13 @@
                             </form>
                         }
                     </div>
+                    <form asp-action="AddComment" method="post" id="replyForm_@comment.Id" class="mt-2 modern-form" style="display:none;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="movieId" value="@Model.Id" />
+                        <input type="hidden" name="parentCommentId" value="@comment.Id" />
+                        <textarea name="text" class="form-control comment-input" rows="2" required placeholder="Ответ на комментарий..."></textarea>
+                        <button class="btn-primary mt-2" type="submit">Отправить ответ</button>
+                    </form>
                 </article>
             }
         </div>
@@ -265,6 +276,70 @@
     if (showTrailerBtn) showTrailerBtn.addEventListener('click', () => switchMode('trailer'));
     switchMode(section.dataset.initialMode || 'none');
 })();
+
+
+(() => {
+    const ratingStars = document.getElementById('ratingStars');
+    const scoreInput = document.getElementById('ratingScore');
+    if (!ratingStars || !scoreInput) return;
+
+    const buttons = Array.from(ratingStars.querySelectorAll('.star-btn'));
+    const applyActive = (value) => {
+        buttons.forEach(btn => {
+            const v = Number(btn.dataset.value || 0);
+            btn.classList.toggle('active', v <= value);
+        });
+    };
+
+    buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const value = Number(btn.dataset.value || 0);
+            if (!value) return;
+            scoreInput.value = String(value);
+            applyActive(value);
+        });
+    });
+})();
+
+
+
+function getCsrfToken() {
+    const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+    return tokenInput ? tokenInput.value : '';
+}
+
+async function postCommentReaction(url, commentId) {
+    const token = getCsrfToken();
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'RequestVerificationToken': token
+        },
+        body: `commentId=${encodeURIComponent(commentId)}&__RequestVerificationToken=${encodeURIComponent(token)}`
+    });
+    if (!response.ok) throw new Error('Reaction failed');
+}
+
+async function toggleLike(button, commentId) {
+    try {
+        await postCommentReaction('@Url.Action("LikeComment", "Cinema")', commentId);
+        window.location.reload();
+    } catch { alert('Не удалось поставить лайк'); }
+}
+
+async function toggleDislike(button, commentId) {
+    try {
+        await postCommentReaction('@Url.Action("DislikeComment", "Cinema")', commentId);
+        window.location.reload();
+    } catch { alert('Не удалось поставить дизлайк'); }
+}
+
+function toggleReplyForm(commentId) {
+    const form = document.getElementById(`replyForm_${commentId}`);
+    if (!form) return;
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
 
 (() => {
     const copyBtn = document.getElementById('copyMovieLinkBtn');
