@@ -21,6 +21,8 @@ namespace Watchly.Web.Data
         public DbSet<CommentLike> CommentLikes => Set<CommentLike>();
         public DbSet<Friendship> Friendships => Set<Friendship>();
         public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
+        public DbSet<DiscussionRoom> DiscussionRooms => Set<DiscussionRoom>();
+        public DbSet<DiscussionRoomMessage> DiscussionRoomMessages => Set<DiscussionRoomMessage>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -101,6 +103,23 @@ namespace Watchly.Web.Data
                 entity.HasOne(e => e.Sender).WithMany().HasForeignKey(e => e.SenderId).OnDelete(DeleteBehavior.NoAction);
                 entity.HasOne(e => e.Recipient).WithMany().HasForeignKey(e => e.RecipientId).OnDelete(DeleteBehavior.NoAction);
                 entity.HasOne(e => e.Movie).WithMany().HasForeignKey(e => e.MovieId).OnDelete(DeleteBehavior.SetNull);
+            });
+
+            builder.Entity<DiscussionRoom>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.Movie).WithMany().HasForeignKey(e => e.MovieId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.CreatedByUser).WithMany().HasForeignKey(e => e.CreatedByUserId).OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.FriendUser).WithMany().HasForeignKey(e => e.FriendUserId).OnDelete(DeleteBehavior.NoAction);
+            });
+
+            builder.Entity<DiscussionRoomMessage>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Text).HasMaxLength(2000);
+                entity.Property(e => e.ImageUrl).HasMaxLength(500);
+                entity.HasOne(e => e.Room).WithMany(r => r.Messages).HasForeignKey(e => e.RoomId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Sender).WithMany().HasForeignKey(e => e.SenderId).OnDelete(DeleteBehavior.NoAction);
             });
 
             builder.Entity<Genre>().HasData(

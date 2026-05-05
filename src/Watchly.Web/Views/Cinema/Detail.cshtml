@@ -48,6 +48,7 @@
                         </form>
                         <button type="button" id="copyMovieLinkBtn" class="btn-secondary"><i class="fas fa-link"></i> Копировать ссылку</button>
                         <button type="button" class="btn-secondary" data-bs-toggle="modal" data-bs-target="#shareMovieModal"><i class="fas fa-paper-plane"></i> Отправить другу</button>
+                        <button type="button" class="btn-primary" data-bs-toggle="modal" data-bs-target="#createRoomModal"><i class="fas fa-users"></i> Создать комнату</button>
                     </div>
                 }
             </div>
@@ -170,6 +171,38 @@
                 <div class="modal-footer">
                     <button class="btn-secondary" type="button" data-bs-dismiss="modal">Отмена</button>
                     <button class="btn-primary" type="submit">Отправить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="createRoomModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header">
+                <h5 class="modal-title">Создать комнату обсуждения</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-controller="DiscussionRoom" asp-action="Create" method="post">
+                <div class="modal-body">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="movieId" value="@Model.Id" />
+                    <p class="small text-muted">Выберите друга, с кем хотите смотреть и обсуждать фильм в реальном времени.</p>
+                    <div class="mb-3">
+                        <label class="form-label">Друг</label>
+                        <select class="form-select" name="friendId" required>
+                            <option value="">Выберите друга</option>
+                            @foreach (var friend in Model.ShareFriends)
+                            {
+                                <option value="@friend.UserId">@(string.IsNullOrWhiteSpace(friend.FullName) ? friend.UserName : $"{friend.FullName} (@{friend.UserName})")</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" type="button" data-bs-dismiss="modal">Отмена</button>
+                    <button class="btn-primary" type="submit">Создать комнату</button>
                 </div>
             </form>
         </div>
