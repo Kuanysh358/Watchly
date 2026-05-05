@@ -46,5 +46,6 @@ namespace Watchly.Web.Models.ViewModels
     {
         public int Id { get; set; }
         public string Title { get; set; } = string.Empty;
+        public bool IsFavorite { get; set; }
     }
 }

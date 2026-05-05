@@ -253,8 +253,9 @@ namespace Watchly.Web.Controllers
                 .OrderBy(m => m.CreatedAt)
                 .ToListAsync();
 
-            var availableMovies = await _context.Movies.OrderBy(m => m.Title).Take(100)
-                .Select(m => new MovieOptionViewModel { Id = m.Id, Title = m.Title })
+            var favoriteIds = await _context.Watchlists.Where(w => w.UserId == currentUser.Id).Select(w => w.MovieId).ToListAsync();
+            var availableMovies = await _context.Movies.OrderBy(m => m.Title).Take(200)
+                .Select(m => new MovieOptionViewModel { Id = m.Id, Title = m.Title, IsFavorite = favoriteIds.Contains(m.Id) })
                 .ToListAsync();
 
             var vm = new ChatViewModel

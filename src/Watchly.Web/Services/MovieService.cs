@@ -102,6 +102,22 @@ namespace Watchly.Web.Services
                 vm.ResumePositionSeconds = vh?.LastPositionSeconds ?? 0;
                 vm.UserWatchedHours = (await _context.ViewHistories.Where(v => v.UserId == userId).SumAsync(v => v.WatchedMinutesTotal)) / 60.0;
                 vm.UserRating = await _context.MovieRatings.Where(r => r.UserId == userId && r.MovieId == id).Select(r => r.Score).FirstOrDefaultAsync();
+
+                vm.ShareFriends = await _context.Friendships
+                    .Where(f => f.Status == FriendshipStatus.Accepted && (f.UserId1 == userId || f.UserId2 == userId))
+                    .Join(_context.Users,
+                        f => f.UserId1 == userId ? f.UserId2 : f.UserId1,
+                        u => u.Id,
+                        (f, u) => new FriendshipViewModel
+                        {
+                            UserId = u.Id,
+                            UserName = u.UserName ?? "User",
+                            FullName = u.FullName,
+                            AvatarUrl = u.AvatarUrl,
+                            Status = FriendshipStatus.Accepted
+                        })
+                    .OrderBy(f => f.UserName)
+                    .ToListAsync();
             }
 
             return vm;
