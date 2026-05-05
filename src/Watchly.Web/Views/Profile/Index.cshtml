@@ -1,0 +1,392 @@
+@model Watchly.Web.Models.ViewModels.UserProfileViewModel
+@{ ViewData["Title"] = "Профиль"; }
+
+<div class="profile-search">
+    <h4 class="mb-3">Поиск пользователей</h4>
+    <input id="userSearchInput" class="form-control" placeholder="Введите никнейм" autocomplete="off" />
+    <div id="userSearchResults" class="search-results"></div>
+    <form id="friendActionsToken" method="post">
+        @Html.AntiForgeryToken()
+    </form>
+</div>
+
+<div class="profile-layout">
+    <div class="profile-edit-col">
+        <div class="form-card">
+            <div class="profile-avatar-wrap">
+                <img src="@Model.AvatarUrl" alt="Аватар" class="profile-avatar-img @(string.IsNullOrWhiteSpace(Model.AvatarUrl) ? "d-none" : "")" id="profileAvatar" />
+                <div class="profile-avatar-placeholder @(string.IsNullOrWhiteSpace(Model.AvatarUrl) ? "" : "d-none")" id="profileAvatarPlaceholder">
+                    <i class="fas fa-user-circle fa-4x"></i>
+                </div>
+            </div>
+            <h2 class="text-center mb-1" id="profileName">@(!string.IsNullOrWhiteSpace(Model.FullName) ? Model.FullName : Model.UserName)</h2>
+            <p class="text-center text-muted mb-3">@Model.UserName</p>
+            <p class="text-center text-muted mb-3">На сайте с @Model.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</p>
+            <button class="btn-primary w-100" type="button" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                <i class="fas fa-pen"></i> Редактировать
+            </button>
+        </div>
+
+        <div class="form-card mt-3">
+            <h4><i class="fas fa-chart-bar"></i> Статистика</h4>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-value">@Model.ViewedMoviesCount</span>
+                    <span class="stat-label">Просмотрено фильмов</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">@Model.FriendsCount</span>
+                    <span class="stat-label">Друзей</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">@Model.AverageRating.ToString("0.0")</span>
+                    <span class="stat-label">Средняя оценка</span>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.IncomingRequests.Any())
+        {
+            <div class="profile-section">
+                <h4><i class="fas fa-user-check"></i> Запросы в друзья</h4>
+                <div class="friend-list">
+                    @foreach (var request in Model.IncomingRequests)
+                    {
+                        <div class="friend-card">
+                            <div class="friend-info">
+                                @if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
+                                {
+                                    <img src="@request.AvatarUrl" alt="Аватар" class="friend-avatar" />
+                                }
+                                <div>
+                                    <div class="friend-name">@request.UserName</div>
+                                    @if (!string.IsNullOrWhiteSpace(request.FullName))
+                                    {
+                                        <div class="friend-sub text-muted">@request.FullName</div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="friend-actions">
+                                <form asp-action="AcceptFriendRequest" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="userId" value="@request.UserId" />
+                                    <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                    <button class="btn-primary btn-sm" type="submit">Принять</button>
+                                </form>
+                                <form asp-action="DeclineFriendRequest" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="userId" value="@request.UserId" />
+                                    <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                    <button class="btn-danger btn-sm" type="submit">Отклонить</button>
+                                </form>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (Model.OutgoingRequests.Any())
+        {
+            <div class="profile-section">
+                <h4><i class="fas fa-user-clock"></i> Отправленные запросы</h4>
+                <div class="friend-list">
+                    @foreach (var request in Model.OutgoingRequests)
+                    {
+                        <div class="friend-card">
+                            <div class="friend-info">
+                                @if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
+                                {
+                                    <img src="@request.AvatarUrl" alt="Аватар" class="friend-avatar" />
+                                }
+                                <div>
+                                    <div class="friend-name">@request.UserName</div>
+                                    @if (!string.IsNullOrWhiteSpace(request.FullName))
+                                    {
+                                        <div class="friend-sub text-muted">@request.FullName</div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="friend-actions">
+                                <form asp-action="RemoveFriend" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="userId" value="@request.UserId" />
+                                    <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                    <button class="btn-secondary btn-sm" type="submit">Отменить</button>
+                                </form>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="profile-section">
+            <h4><i class="fas fa-user-friends"></i> Друзья</h4>
+            @if (Model.Friends.Any())
+            {
+                <div class="friend-list">
+                    @foreach (var friend in Model.Friends)
+                    {
+                        <div class="friend-card">
+                            <a class="friend-info" asp-action="Public" asp-route-id="@friend.UserId">
+                                @if (!string.IsNullOrWhiteSpace(friend.AvatarUrl))
+                                {
+                                    <img src="@friend.AvatarUrl" alt="Аватар" class="friend-avatar" />
+                                }
+                                <div>
+                                    <div class="friend-name">@friend.UserName</div>
+                                    @if (!string.IsNullOrWhiteSpace(friend.FullName))
+                                    {
+                                        <div class="friend-sub text-muted">@friend.FullName</div>
+                                    }
+                                </div>
+                            </a>
+                            <div class="friend-actions">
+                                <a class="btn-secondary btn-sm" asp-action="Chat" asp-route-id="@friend.UserId">Написать сообщение</a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">Пока нет друзей.</p>
+            }
+        </div>
+    </div>
+
+    <div class="profile-info-col">
+        <div class="profile-section">
+            <h4><i class="fas fa-history"></i> Просмотрено недавно</h4>
+            @if (Model.RecentViews.Any())
+            {
+                <div class="history-list">
+                    @foreach (var item in Model.RecentViews)
+                    {
+                        <div class="history-item">
+                            @if (!string.IsNullOrWhiteSpace(item.PosterUrl))
+                            {
+                                <img src="@item.PosterUrl" alt="@item.Title" class="history-poster" />
+                            }
+                            <div class="history-info">
+                                <a asp-controller="Cinema" asp-action="Detail" asp-route-id="@item.MovieId" class="history-title">@item.Title</a>
+                                <span class="text-muted small">@item.ViewedAt.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">История просмотров пуста.</p>
+            }
+        </div>
+
+        <div class="profile-section">
+            <h4><i class="fas fa-star"></i> Мои оценки</h4>
+            @if (Model.Ratings.Any())
+            {
+                <div class="history-list">
+                    @foreach (var item in Model.Ratings)
+                    {
+                        <div class="history-item">
+                            @if (!string.IsNullOrWhiteSpace(item.PosterUrl))
+                            {
+                                <img src="@item.PosterUrl" alt="@item.Title" class="history-poster" />
+                            }
+                            <div class="history-info">
+                                <a asp-controller="Cinema" asp-action="Detail" asp-route-id="@item.MovieId" class="history-title">@item.Title</a>
+                                <span class="text-muted small">Оценка: @item.Score</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">Оценок пока нет.</p>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактирование профиля</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="profileEditForm" method="post" enctype="multipart/form-data" asp-action="Update">
+                <div class="modal-body">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label class="form-label">Никнейм</label>
+                        <input name="UserName" value="@Model.EditProfile?.UserName" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Имя</label>
+                        <input name="FullName" value="@Model.EditProfile?.FullName" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Аватар (загрузить файл)</label>
+                        <input name="AvatarFile" id="avatarFileInput" type="file" accept="image/*" class="form-control" />
+                        <small class="text-muted d-block mt-1" id="avatarFileName"></small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Аватар (URL)</label>
+                        <input name="AvatarUrl" value="@Model.EditProfile?.AvatarUrl" placeholder="https://..." class="form-control" />
+                    </div>
+                    <hr class="my-3" />
+                    <div class="mb-3">
+                        <label class="form-label">Текущий пароль</label>
+                        <input name="CurrentPassword" type="password" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Новый пароль</label>
+                        <input name="NewPassword" type="password" class="form-control" />
+                    </div>
+                    <div class="alert alert-danger d-none" id="profileEditError"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" type="button" data-bs-dismiss="modal">Отмена</button>
+                    <button class="btn-primary" type="submit">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const avatarInput = document.getElementById('avatarFileInput');
+            const avatarFileName = document.getElementById('avatarFileName');
+            const editForm = document.getElementById('profileEditForm');
+            const errorBox = document.getElementById('profileEditError');
+            const profileName = document.getElementById('profileName');
+            const profileAvatar = document.getElementById('profileAvatar');
+            const profileAvatarPlaceholder = document.getElementById('profileAvatarPlaceholder');
+            const userSearchInput = document.getElementById('userSearchInput');
+            const userSearchResults = document.getElementById('userSearchResults');
+            const tokenInput = document.querySelector('#friendActionsToken input[name="__RequestVerificationToken"]');
+            const requestToken = tokenInput ? tokenInput.value : '';
+
+            if (avatarInput && avatarFileName) {
+                avatarInput.addEventListener('change', () => {
+                    avatarFileName.textContent = avatarInput.files && avatarInput.files.length > 0 ? `Выбран файл: ${avatarInput.files[0].name}` : '';
+                });
+            }
+
+            if (editForm) {
+                editForm.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    if (errorBox) errorBox.classList.add('d-none');
+                    const formData = new FormData(editForm);
+                    try {
+                        const response = await fetch(editForm.action, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (!response.ok) {
+                            const error = await response.json();
+                            if (errorBox) {
+                                errorBox.textContent = error.message || 'Не удалось сохранить изменения';
+                                errorBox.classList.remove('d-none');
+                            }
+                            return;
+                        }
+
+                        const data = await response.json();
+                        if (profileName) profileName.textContent = data.fullName || data.userName;
+                        if (data.avatarUrl && profileAvatar) {
+                            profileAvatar.src = data.avatarUrl;
+                            profileAvatar.classList.remove('d-none');
+                            if (profileAvatarPlaceholder) profileAvatarPlaceholder.classList.add('d-none');
+                        }
+                        const modalEl = document.getElementById('editProfileModal');
+                        if (modalEl) {
+                            const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                            modal.hide();
+                        }
+                    } catch {
+                        if (errorBox) {
+                            errorBox.textContent = 'Не удалось сохранить изменения';
+                            errorBox.classList.remove('d-none');
+                        }
+                    }
+                });
+            }
+
+            const currentUrl = () => window.location.pathname + window.location.search;
+            const renderUser = (user) => {
+                const fullName = user.fullName ? `<div class="friend-sub text-muted">${user.fullName}</div>` : '';
+                let actions = '';
+                if (user.isFriend) {
+                    actions = `<a class="btn-secondary btn-sm" href="/Profile/Public/${user.userId}">Профиль</a>`;
+                } else if (user.isIncomingRequest) {
+                    actions = `
+                        <form method="post" action="/Profile/AcceptFriendRequest">
+                            <input type="hidden" name="__RequestVerificationToken" value="${requestToken}">
+                            <input type="hidden" name="userId" value="${user.userId}">
+                            <input type="hidden" name="returnUrl" value="${currentUrl()}">
+                            <button class="btn-primary btn-sm" type="submit">Принять</button>
+                        </form>
+                        <form method="post" action="/Profile/DeclineFriendRequest">
+                            <input type="hidden" name="__RequestVerificationToken" value="${requestToken}">
+                            <input type="hidden" name="userId" value="${user.userId}">
+                            <input type="hidden" name="returnUrl" value="${currentUrl()}">
+                            <button class="btn-danger btn-sm" type="submit">Отклонить</button>
+                        </form>`;
+                } else if (user.isOutgoingRequest) {
+                    actions = `<span class="text-muted small">Запрос отправлен</span>`;
+                } else {
+                    actions = `
+                        <form method="post" action="/Profile/SendFriendRequest">
+                            <input type="hidden" name="__RequestVerificationToken" value="${requestToken}">
+                            <input type="hidden" name="userId" value="${user.userId}">
+                            <input type="hidden" name="returnUrl" value="${currentUrl()}">
+                            <button class="btn-primary btn-sm" type="submit">Добавить</button>
+                        </form>`;
+                }
+
+                const avatar = user.avatarUrl ? `<img src="${user.avatarUrl}" alt="Аватар" class="friend-avatar" />` : '';
+                return `
+                    <div class="friend-card">
+                        <div class="friend-info">
+                            ${avatar}
+                            <div>
+                                <div class="friend-name">${user.userName}</div>
+                                ${fullName}
+                            </div>
+                        </div>
+                        <div class="friend-actions">${actions}</div>
+                    </div>`;
+            };
+
+            let searchTimeout;
+            if (userSearchInput) {
+                userSearchInput.addEventListener('input', () => {
+                    clearTimeout(searchTimeout);
+                    const value = userSearchInput.value.trim();
+                    if (value.length < 2) {
+                        if (userSearchResults) userSearchResults.innerHTML = '';
+                        return;
+                    }
+                    searchTimeout = setTimeout(async () => {
+                        const response = await fetch(`/Profile/SearchUsers?query=${encodeURIComponent(value)}`);
+                        if (!response.ok) return;
+                        const data = await response.json();
+                        if (!userSearchResults) return;
+                        if (data.length === 0) {
+                            userSearchResults.innerHTML = '<div class="text-muted small">Пользователи не найдены</div>';
+                            return;
+                        }
+                        userSearchResults.innerHTML = data.map(renderUser).join('');
+                    }, 300);
+                });
+            }
+        })();
+    </script>
+}

@@ -46,6 +46,7 @@
                                 @(Model.IsInWatchlist ? "Убрать из избранного" : "В избранное")
                             </button>
                         </form>
+                        <button type="button" id="copyMovieLinkBtn" class="btn-secondary"><i class="fas fa-link"></i> Поделиться</button>
                     </div>
                 }
             </div>
@@ -193,6 +194,26 @@
     if (showMovieBtn) showMovieBtn.addEventListener('click', () => switchMode('movie'));
     if (showTrailerBtn) showTrailerBtn.addEventListener('click', () => switchMode('trailer'));
     switchMode(section.dataset.initialMode || 'none');
+})();
+
+(() => {
+    const copyBtn = document.getElementById('copyMovieLinkBtn');
+    if (!copyBtn) return;
+    const originalHtml = copyBtn.innerHTML;
+    copyBtn.addEventListener('click', async () => {
+        const url = window.location.href;
+        try {
+            if (navigator.clipboard) {
+                await navigator.clipboard.writeText(url);
+                copyBtn.textContent = 'Ссылка скопирована';
+                setTimeout(() => { copyBtn.innerHTML = originalHtml; }, 2000);
+            } else {
+                window.prompt('Скопируйте ссылку', url);
+            }
+        } catch {
+            window.prompt('Скопируйте ссылку', url);
+        }
+    });
 })();
 </script>
 }

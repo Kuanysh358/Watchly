@@ -2,15 +2,10 @@ using Xunit;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Moq;
 using Watchly.Web.Controllers;
-using Watchly.Web.Data;
 using Watchly.Web.Models.DataModels;
 using Watchly.Web.Models.ViewModels;
-using Watchly.Web.Services;
-using Microsoft.AspNetCore.Hosting;
 
 namespace Watchly.Tests;
 
@@ -29,23 +24,11 @@ public class AccountTests
         return new Mock<SignInManager<ApplicationUser>>(userManager.Object, contextAccessor.Object, claimsFactory.Object, null!, null!, null!, null!);
     }
 
-    private static ApplicationDbContext BuildDbContext(string name)
-    {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(name)
-            .Options;
-        return new ApplicationDbContext(options);
-    }
-
     private static AccountController BuildController(
         Mock<UserManager<ApplicationUser>> userManager,
-        Mock<SignInManager<ApplicationUser>> signInManager,
-        ApplicationDbContext? db = null)
+        Mock<SignInManager<ApplicationUser>> signInManager)
     {
-        db ??= BuildDbContext(Guid.NewGuid().ToString());
-        var movieService = Mock.Of<IMovieService>();
-        var env = Mock.Of<IWebHostEnvironment>();
-        return new AccountController(userManager.Object, signInManager.Object, db, movieService, env);
+        return new AccountController(userManager.Object, signInManager.Object);
     }
 
     [Fact]

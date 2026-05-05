@@ -550,6 +550,65 @@ main { flex: 1; padding: 2rem 0; }
 .history-title { font-weight: 600; font-size: 0.9rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-title:hover { color: var(--accent-light); }
 
+.profile-search {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.search-results { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+.friend-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.friend-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+}
+.friend-info { display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none; }
+.friend-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); }
+.friend-name { font-weight: 600; }
+.friend-sub { font-size: 0.8rem; }
+.friend-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+.chat-shell {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+}
+.chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+.chat-user { display: flex; align-items: center; gap: 0.75rem; }
+.chat-messages { display: flex; flex-direction: column; gap: 0.75rem; max-height: 420px; overflow-y: auto; padding: 0.5rem 0; }
+.chat-message { display: flex; }
+.chat-message.own { justify-content: flex-end; }
+.chat-bubble {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    max-width: 70%;
+}
+.chat-message.own .chat-bubble { background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.35); }
+.chat-bubble p { margin-bottom: 0.5rem; }
+.chat-time { display: block; font-size: 0.75rem; color: var(--muted); }
+.chat-movie-link { color: var(--accent-light); font-weight: 600; display: block; margin-bottom: 0.35rem; }
+.chat-input { display: flex; gap: 0.75rem; margin-top: 1rem; }
+.chat-input .form-control { flex: 1; }
+
 /* ===================== ADMIN PANEL ===================== */
 .admin-shell {
     background: rgba(11,8,20,0.72);

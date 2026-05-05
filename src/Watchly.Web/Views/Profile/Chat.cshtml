@@ -1,0 +1,89 @@
+@model Watchly.Web.Models.ViewModels.ChatViewModel
+@{ ViewData["Title"] = "Чат"; }
+
+<div class="chat-shell">
+    <div class="chat-header">
+        <a class="btn-secondary btn-sm" asp-action="Public" asp-route-id="@Model.FriendId">Назад к профилю</a>
+        <div class="chat-user">
+            @if (!string.IsNullOrWhiteSpace(Model.FriendAvatarUrl))
+            {
+                <img src="@Model.FriendAvatarUrl" alt="Аватар" class="friend-avatar" />
+            }
+            <div>
+                <div class="friend-name">@Model.FriendName</div>
+                <div class="text-muted small">Диалог</div>
+            </div>
+        </div>
+        <button class="btn-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#sendMovieModal">Отправить фильм</button>
+    </div>
+
+    <div class="chat-messages">
+        @if (Model.Messages.Any())
+        {
+            foreach (var message in Model.Messages)
+            {
+                <div class="chat-message @(message.IsOwn ? "own" : "other")">
+                    <div class="chat-bubble">
+                        @if (!string.IsNullOrWhiteSpace(message.Text))
+                        {
+                            <p>@message.Text</p>
+                        }
+                        @if (message.MovieId.HasValue)
+                        {
+                            <a asp-controller="Cinema" asp-action="Detail" asp-route-id="@message.MovieId" class="chat-movie-link">
+                                Фильм: @(string.IsNullOrWhiteSpace(message.MovieTitle) ? "Без названия" : message.MovieTitle)
+                            </a>
+                        }
+                        <span class="chat-time">@message.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-muted">Сообщений пока нет.</p>
+        }
+    </div>
+
+    <form class="chat-input" asp-action="SendMessage" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="friendId" value="@Model.FriendId" />
+        <input class="form-control" name="text" placeholder="Введите сообщение" autocomplete="off" />
+        <button class="btn-primary" type="submit">Отправить</button>
+    </form>
+</div>
+
+<div class="modal fade" id="sendMovieModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header">
+                <h5 class="modal-title">Отправить фильм</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="SendMessage" method="post">
+                <div class="modal-body">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="friendId" value="@Model.FriendId" />
+                    <div class="mb-3">
+                        <label class="form-label">Фильм</label>
+                        <select class="form-select" name="movieId" required>
+                            <option value="">Выберите фильм</option>
+                            @foreach (var movie in Model.AvailableMovies)
+                            {
+                                <option value="@movie.Id">@movie.Title</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Сообщение</label>
+                        <textarea class="form-control" name="text" rows="3" placeholder="Комментарий к фильму"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" type="button" data-bs-dismiss="modal">Отмена</button>
+                    <button class="btn-primary" type="submit">Отправить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

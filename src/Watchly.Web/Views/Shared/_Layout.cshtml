@@ -152,7 +152,7 @@
                                 <i class="fas fa-user"></i> @User.Identity?.Name
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end bg-dark" aria-labelledby="userMenu">
-                                <li><a class="dropdown-item text-light" href="@Url.Action("Profile", "Account")">Профиль</a></li>
+                                <li><a class="dropdown-item text-light" href="@Url.Action("Index", "Profile")">Профиль</a></li>
                                 <li><hr class="dropdown-divider" /></li>
                                 <li>
                                     <form method="post" action="@Url.Action("Logout", "Account")">

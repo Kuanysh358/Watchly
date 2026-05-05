@@ -20,6 +20,5 @@ namespace Watchly.Web.Services
         Task DeleteCommentAsync(int commentId);
         Task ToggleCommentLikeAsync(int commentId, string userId);
         Task SetRatingAsync(int movieId, string userId, int score);
-        Task<ProfileEditViewModel> GetProfileDataAsync(string userId);
     }
 }
