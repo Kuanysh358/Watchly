@@ -152,6 +152,25 @@ namespace Watchly.Web.Services
             };
         }
 
+
+        private static string? NormalizeVideoUrl(string? input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return input;
+            if (Uri.TryCreate(input, UriKind.Absolute, out _)) return input;
+            if (input.StartsWith('/') && !input.StartsWith("//")) return input;
+
+            var normalized = input.Replace('\\', '/');
+            var marker = "wwwroot/videos/";
+            var idx = normalized.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (idx >= 0)
+            {
+                var tail = normalized[(idx + marker.Length)..].TrimStart('/');
+                if (!string.IsNullOrWhiteSpace(tail)) return $"/videos/{tail}";
+            }
+
+            return input;
+        }
+
         public async Task<int?> CreateMovieAsync(MovieCreateEditViewModel model)
         {
             var duplicate = model.TmdbId.HasValue
@@ -167,7 +186,7 @@ namespace Watchly.Web.Services
                 Rating = model.Rating,
                 PosterUrl = model.PosterUrl,
                 TrailerUrl = model.TrailerUrl,
-                VideoUrl = model.VideoUrl,
+                VideoUrl = NormalizeVideoUrl(model.VideoUrl),
                 TmdbId = model.TmdbId,
                 DurationMinutes = model.DurationMinutes,
                 Country = model.Country,
@@ -189,7 +208,7 @@ namespace Watchly.Web.Services
             movie.Rating = model.Rating;
             movie.PosterUrl = model.PosterUrl;
             movie.TrailerUrl = model.TrailerUrl;
-            movie.VideoUrl = model.VideoUrl;
+            movie.VideoUrl = NormalizeVideoUrl(model.VideoUrl);
             movie.TmdbId = model.TmdbId;
             movie.DurationMinutes = model.DurationMinutes;
             movie.Country = model.Country;
