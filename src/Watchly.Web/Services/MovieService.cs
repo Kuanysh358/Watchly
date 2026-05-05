@@ -233,59 +233,6 @@ namespace Watchly.Web.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task<ProfileEditViewModel> GetProfileDataAsync(string userId)
-        {
-            var user = await _context.Users.FindAsync(userId);
-            var history = await _context.ViewHistories
-                .Where(v => v.UserId == userId)
-                .Include(v => v.Movie).ThenInclude(m => m.MovieGenres).ThenInclude(g => g.Genre)
-                .OrderByDescending(v => v.LastViewedAt)
-                .ToListAsync();
-
-            var topGenres = history
-                .SelectMany(v => v.Movie.MovieGenres.Select(g => g.Genre.Name))
-                .GroupBy(x => x).OrderByDescending(g => g.Count()).Take(5)
-                .Select(g => g.Key).ToList();
-
-            var watchlistItems = await _context.Watchlists
-                .Where(w => w.UserId == userId)
-                .Include(w => w.Movie).ThenInclude(m => m.MovieGenres).ThenInclude(mg => mg.Genre)
-                .OrderByDescending(w => w.AddedAt)
-                .Select(w => MapCard(w.Movie, true))
-                .ToListAsync();
-
-            var resumeItems = history
-                .Where(h => h.LastPositionSeconds > 0)
-                .Take(5)
-                .Select(h => new ResumeItemViewModel
-                {
-                    MovieId = h.MovieId,
-                    Title = h.Movie.Title,
-                    PosterUrl = h.Movie.PosterUrl,
-                    LastPositionSeconds = h.LastPositionSeconds
-                }).ToList();
-
-            return new ProfileEditViewModel
-            {
-                FullName = user?.FullName ?? user?.UserName ?? string.Empty,
-                Email = user?.Email ?? string.Empty,
-                AvatarUrl = user?.AvatarUrl,
-                TotalViewedMovies = history.Select(h => h.MovieId).Distinct().Count(),
-                TotalWatchedHours = history.Sum(h => h.WatchedMinutesTotal) / 60.0,
-                TopGenres = topGenres,
-                ViewHistoryItems = history.Take(10).Select(h => new ViewHistoryItemViewModel
-                {
-                    MovieId = h.MovieId,
-                    Title = h.Movie.Title,
-                    PosterUrl = h.Movie.PosterUrl,
-                    LastViewedAt = h.LastViewedAt,
-                    ViewCount = h.ViewCount
-                }).ToList(),
-                WatchlistItems = watchlistItems,
-                ResumeItems = resumeItems
-            };
-        }
-
         public async Task SetRatingAsync(int movieId, string userId, int score)
         {
             var entity = await _context.MovieRatings.FirstOrDefaultAsync(r => r.UserId == userId && r.MovieId == movieId);

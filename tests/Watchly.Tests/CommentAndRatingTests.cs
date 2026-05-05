@@ -109,24 +109,4 @@ public class CommentAndRatingTests
         Assert.Equal(1234, vh.LastPositionSeconds);
     }
 
-    [Fact]
-    public async Task GetProfileDataAsync_ReturnsStats()
-    {
-        using var ctx = BuildContext(nameof(GetProfileDataAsync_ReturnsStats));
-        var repo = new MovieRepository(ctx);
-        var service = new MovieService(repo, ctx);
-
-        // Add a user
-        var user = new ApplicationUser { Id = "u1", UserName = "test", Email = "t@t.com", FullName = "Test User" };
-        ctx.Users.Add(user);
-        await ctx.SaveChangesAsync();
-
-        var movie = await repo.CreateAsync(new Movie { Title = "G", ReleaseYear = 2020, Rating = 7 });
-        await service.RecordViewAsync(movie.Id, "u1", 3600);
-
-        var profile = await service.GetProfileDataAsync("u1");
-
-        Assert.Equal(1, profile.TotalViewedMovies);
-        Assert.Equal("Test User", profile.FullName);
-    }
 }

@@ -19,5 +19,9 @@ namespace Watchly.Web.Models.DataModels
         public virtual ICollection<MovieComment> Comments { get; set; } = new List<MovieComment>();
 
         public virtual ICollection<MovieRating> Ratings { get; set; } = new List<MovieRating>();
+
+        public virtual ICollection<Friendship> FriendshipsInitiated { get; set; } = new List<Friendship>();
+
+        public virtual ICollection<Friendship> FriendshipsReceived { get; set; } = new List<Friendship>();
     }
 }

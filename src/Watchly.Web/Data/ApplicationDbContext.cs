@@ -19,6 +19,8 @@ namespace Watchly.Web.Data
         public DbSet<MovieComment> MovieComments => Set<MovieComment>();
         public DbSet<MovieRating> MovieRatings => Set<MovieRating>();
         public DbSet<CommentLike> CommentLikes => Set<CommentLike>();
+        public DbSet<Friendship> Friendships => Set<Friendship>();
+        public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -82,6 +84,23 @@ namespace Watchly.Web.Data
                 entity.HasOne(e => e.Comment).WithMany(c => c.Likes).HasForeignKey(e => e.CommentId).OnDelete(DeleteBehavior.Cascade);
                 entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.NoAction);
                 entity.HasIndex(e => new { e.CommentId, e.UserId }).IsUnique();
+            });
+
+            builder.Entity<Friendship>(entity =>
+            {
+                entity.HasKey(e => new { e.UserId1, e.UserId2 });
+                entity.HasOne(e => e.User1).WithMany(u => u.FriendshipsInitiated).HasForeignKey(e => e.UserId1).OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.User2).WithMany(u => u.FriendshipsReceived).HasForeignKey(e => e.UserId2).OnDelete(DeleteBehavior.NoAction);
+                entity.HasIndex(e => new { e.UserId1, e.UserId2 }).IsUnique();
+            });
+
+            builder.Entity<DirectMessage>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Text).HasMaxLength(2000);
+                entity.HasOne(e => e.Sender).WithMany().HasForeignKey(e => e.SenderId).OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.Recipient).WithMany().HasForeignKey(e => e.RecipientId).OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.Movie).WithMany().HasForeignKey(e => e.MovieId).OnDelete(DeleteBehavior.SetNull);
             });
 
             builder.Entity<Genre>().HasData(
