@@ -49,6 +49,10 @@
                             <span class="movie-year">@movie.ReleaseYear</span>
                             @if (movie.Rating > 0) { <span class="movie-rating"><i class="fas fa-star"></i> @movie.Rating</span> }
                         </div>
+                        @if (movie.Genres.Any())
+                        {
+                            <div class="movie-card-genres">@string.Join(" • ", movie.Genres.Take(2))</div>
+                        }
                     </div>
                 </a>
             </article>
@@ -85,7 +89,8 @@
        results.innerHTML = data.map(m => {
          const poster = m.posterUrl || 'https://via.placeholder.com/250x360?text=No+Poster';
          const ratingHtml = m.rating > 0 ? `<span class="movie-rating"><i class="fas fa-star"></i> ${m.rating}</span>` : '';
-         return `<article class="movie-card"><a class="movie-card-link" href="/Cinema/Detail/${m.id}"><img src="${poster}" loading="lazy"/><div class="movie-card-info"><h4 class="movie-card-title">${m.title}</h4><div class="movie-card-meta"><span class="movie-year">${m.releaseYear || ''}</span>${ratingHtml}</div></div></a></article>`;
+         const genresHtml = Array.isArray(m.genres) && m.genres.length ? `<div class="movie-card-genres">${m.genres.slice(0, 2).join(' • ')}</div>` : '';
+         return `<article class="movie-card"><a class="movie-card-link" href="/Cinema/Detail/${m.id}"><img src="${poster}" loading="lazy"/><div class="movie-card-info"><h4 class="movie-card-title">${m.title}</h4><div class="movie-card-meta"><span class="movie-year">${m.releaseYear || ''}</span>${ratingHtml}</div>${genresHtml}</div></a></article>`;
        }).join('');
        results.style.display='grid';
      } catch {}

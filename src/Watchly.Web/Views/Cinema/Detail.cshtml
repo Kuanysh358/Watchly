@@ -228,22 +228,43 @@
 
     const normalizeTrailerUrl = (url) => {
         if (!url) return '';
+        let trimmed = url.trim();
+
+        const iframeSrcMatch = trimmed.match(/src=["']([^"']+)["']/i);
+        if (iframeSrcMatch && iframeSrcMatch[1]) {
+            trimmed = iframeSrcMatch[1].trim();
+        }
+
+        const directYoutubeIdMatch = trimmed.match(/^[a-zA-Z0-9_-]{11}$/);
+        if (directYoutubeIdMatch) {
+            return `https://www.youtube.com/embed/${trimmed}?autoplay=1`;
+        }
+
+        const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
         try {
-            const parsed = new URL(url, window.location.origin);
-            if (parsed.hostname.includes('youtube.com') && parsed.searchParams.get('v')) {
-                return `https://www.youtube.com/embed/${parsed.searchParams.get('v')}?autoplay=1`;
+            const parsed = new URL(withScheme);
+            if (parsed.hostname.includes('youtube.com')) {
+                const videoId = parsed.searchParams.get('v');
+                if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+
+                if (parsed.pathname.includes('/embed/')) {
+                    return `${parsed.origin}${parsed.pathname}${parsed.search ? `${parsed.search}&autoplay=1` : '?autoplay=1'}`;
+                }
             }
+
             if (parsed.hostname.includes('youtu.be')) {
                 const id = parsed.pathname.replace('/', '').trim();
-                return id ? `https://www.youtube.com/embed/${id}?autoplay=1` : url;
+                return id ? `https://www.youtube.com/embed/${id}?autoplay=1` : withScheme;
             }
-            return url;
+
+            return withScheme;
         } catch {
-            return url;
+            return trimmed;
         }
     };
 
-    const showMovieBtn = document.getElementById('showMovieBtn');
+        const showMovieBtn = document.getElementById('showMovieBtn');
     const showTrailerBtn = document.getElementById('showTrailerBtn');
     const movieBlock = document.getElementById('moviePlayerBlock');
     const trailerBlock = document.getElementById('trailerPlayerBlock');
