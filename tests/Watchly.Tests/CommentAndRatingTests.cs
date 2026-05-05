@@ -95,6 +95,21 @@ public class CommentAndRatingTests
         Assert.Equal(7.0m, updated!.Rating);
     }
 
+
+    [Fact]
+    public async Task SetRatingAsync_FirstUserRating_AveragesWithBaseMovieRating()
+    {
+        using var ctx = BuildContext(nameof(SetRatingAsync_FirstUserRating_AveragesWithBaseMovieRating));
+        var repo = new MovieRepository(ctx);
+        var service = new MovieService(repo, ctx);
+        var movie = await repo.CreateAsync(new Movie { Title = "G", ReleaseYear = 2020, Rating = 6 });
+
+        await service.SetRatingAsync(movie.Id, "user1", 8);
+
+        var updated = await repo.GetByIdAsync(movie.Id);
+        Assert.Equal(7.0m, updated!.Rating);
+    }
+
     [Fact]
     public async Task SaveResumePositionAsync_StoresPosition()
     {
@@ -107,6 +122,38 @@ public class CommentAndRatingTests
 
         var vh = ctx.ViewHistories.Single();
         Assert.Equal(1234, vh.LastPositionSeconds);
+    }
+
+    [Fact]
+    public async Task ToggleCommentDislikeAsync_AddsDislike()
+    {
+        using var ctx = BuildContext(nameof(ToggleCommentDislikeAsync_AddsDislike));
+        var repo = new MovieRepository(ctx);
+        var service = new MovieService(repo, ctx);
+        var movie = await repo.CreateAsync(new Movie { Title = "H", ReleaseYear = 2020, Rating = 7 });
+
+        await service.AddCommentAsync(movie.Id, "user1", "Good");
+        var commentId = ctx.MovieComments.Single().Id;
+
+        await service.ToggleCommentDislikeAsync(commentId, "user2");
+
+        Assert.Single(ctx.CommentDislikes);
+    }
+
+    [Fact]
+    public async Task AddCommentAsync_WithParentComment_SetsParentId()
+    {
+        using var ctx = BuildContext(nameof(AddCommentAsync_WithParentComment_SetsParentId));
+        var repo = new MovieRepository(ctx);
+        var service = new MovieService(repo, ctx);
+        var movie = await repo.CreateAsync(new Movie { Title = "I", ReleaseYear = 2020, Rating = 7 });
+
+        await service.AddCommentAsync(movie.Id, "user1", "Root");
+        var parent = ctx.MovieComments.Single();
+        await service.AddCommentAsync(movie.Id, "user2", "Reply", parent.Id);
+
+        var reply = ctx.MovieComments.OrderByDescending(x => x.Id).First();
+        Assert.Equal(parent.Id, reply.ParentCommentId);
     }
 
 }

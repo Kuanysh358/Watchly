@@ -58,7 +58,8 @@ namespace Watchly.Web.Services
             var commentsQuery = _context.MovieComments
                 .Where(c => c.MovieId == id)
                 .Include(c => c.User)
-                .Include(c => c.Likes);
+                .Include(c => c.Likes)
+                .Include(c => c.Dislikes);
 
             IQueryable<MovieComment> orderedComments = commentSort == "popular"
                 ? commentsQuery.OrderByDescending(c => c.Likes.Count)
@@ -72,7 +73,10 @@ namespace Watchly.Web.Services
                 Text = c.Text,
                 CreatedAt = c.CreatedAt,
                 LikeCount = c.Likes.Count,
-                LikedByCurrentUser = userId != null && c.Likes.Any(l => l.UserId == userId)
+                DislikeCount = c.Dislikes.Count,
+                LikedByCurrentUser = userId != null && c.Likes.Any(l => l.UserId == userId),
+                DislikedByCurrentUser = userId != null && c.Dislikes.Any(l => l.UserId == userId),
+                ParentCommentId = c.ParentCommentId
             }).ToListAsync();
 
             var vm = new MovieDetailViewModel
@@ -225,9 +229,9 @@ namespace Watchly.Web.Services
         public async Task SaveResumePositionAsync(int movieId, string userId, int positionSeconds)
             => await RecordViewAsync(movieId, userId, 0, positionSeconds);
 
-        public async Task AddCommentAsync(int movieId, string userId, string text)
+        public async Task AddCommentAsync(int movieId, string userId, string text, int? parentCommentId = null)
         {
-            _context.MovieComments.Add(new MovieComment { MovieId = movieId, UserId = userId, Text = text.Trim() });
+            _context.MovieComments.Add(new MovieComment { MovieId = movieId, UserId = userId, Text = text.Trim(), ParentCommentId = parentCommentId });
             await _context.SaveChangesAsync();
         }
 
@@ -245,7 +249,25 @@ namespace Watchly.Web.Services
         {
             var existing = await _context.CommentLikes.FirstOrDefaultAsync(l => l.CommentId == commentId && l.UserId == userId);
             if (existing != null) _context.CommentLikes.Remove(existing);
-            else _context.CommentLikes.Add(new CommentLike { CommentId = commentId, UserId = userId });
+            else
+            {
+                _context.CommentLikes.Add(new CommentLike { CommentId = commentId, UserId = userId });
+                var dislike = await _context.CommentDislikes.FirstOrDefaultAsync(l => l.CommentId == commentId && l.UserId == userId);
+                if (dislike != null) _context.CommentDislikes.Remove(dislike);
+            }
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task ToggleCommentDislikeAsync(int commentId, string userId)
+        {
+            var existing = await _context.CommentDislikes.FirstOrDefaultAsync(l => l.CommentId == commentId && l.UserId == userId);
+            if (existing != null) _context.CommentDislikes.Remove(existing);
+            else
+            {
+                _context.CommentDislikes.Add(new CommentDislike { CommentId = commentId, UserId = userId });
+                var like = await _context.CommentLikes.FirstOrDefaultAsync(l => l.CommentId == commentId && l.UserId == userId);
+                if (like != null) _context.CommentLikes.Remove(like);
+            }
             await _context.SaveChangesAsync();
         }
 
@@ -256,11 +278,20 @@ namespace Watchly.Web.Services
             else entity.Score = score;
 
             await _context.SaveChangesAsync();
-            var avg = await _context.MovieRatings.Where(r => r.MovieId == movieId).AverageAsync(r => (decimal?)r.Score) ?? 0m;
+            var ratingQuery = _context.MovieRatings.Where(r => r.MovieId == movieId);
+            var avg = await ratingQuery.AverageAsync(r => (decimal?)r.Score) ?? 0m;
+            var ratingCount = await ratingQuery.CountAsync();
             var movie = await _context.Movies.FindAsync(movieId);
             if (movie != null)
             {
-                movie.Rating = Math.Round(avg, 1);
+                if (ratingCount == 1)
+                {
+                    movie.Rating = Math.Round((movie.Rating + avg) / 2m, 1);
+                }
+                else
+                {
+                    movie.Rating = Math.Round(avg, 1);
+                }
                 await _context.SaveChangesAsync();
             }
         }

@@ -19,6 +19,7 @@ namespace Watchly.Web.Data
         public DbSet<MovieComment> MovieComments => Set<MovieComment>();
         public DbSet<MovieRating> MovieRatings => Set<MovieRating>();
         public DbSet<CommentLike> CommentLikes => Set<CommentLike>();
+        public DbSet<CommentDislike> CommentDislikes => Set<CommentDislike>();
         public DbSet<Friendship> Friendships => Set<Friendship>();
         public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
         public DbSet<DiscussionRoom> DiscussionRooms => Set<DiscussionRoom>();
@@ -84,6 +85,15 @@ namespace Watchly.Web.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.HasOne(e => e.Comment).WithMany(c => c.Likes).HasForeignKey(e => e.CommentId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.NoAction);
+                entity.HasIndex(e => new { e.CommentId, e.UserId }).IsUnique();
+            });
+
+
+            builder.Entity<CommentDislike>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.Comment).WithMany(c => c.Dislikes).HasForeignKey(e => e.CommentId).OnDelete(DeleteBehavior.NoAction);
                 entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.NoAction);
                 entity.HasIndex(e => new { e.CommentId, e.UserId }).IsUnique();
             });
