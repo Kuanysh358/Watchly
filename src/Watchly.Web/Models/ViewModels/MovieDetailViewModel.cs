@@ -22,5 +22,6 @@ namespace Watchly.Web.Models.ViewModels
         public List<string> Genres { get; set; } = new List<string>();
         public bool IsInWatchlist { get; set; }
         public bool HasBeenViewed { get; set; }
+        public List<FriendshipViewModel> ShareFriends { get; set; } = new();
     }
 }

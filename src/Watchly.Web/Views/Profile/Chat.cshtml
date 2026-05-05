@@ -66,11 +66,16 @@
                     <input type="hidden" name="friendId" value="@Model.FriendId" />
                     <div class="mb-3">
                         <label class="form-label">Фильм</label>
-                        <select class="form-select" name="movieId" required>
+                        <input id="movieSearchInput" class="form-control mb-2" placeholder="Поиск фильма" autocomplete="off" />
+                        <div class="btn-group mb-2 w-100" role="group">
+                            <button type="button" class="btn btn-outline-light active" data-filter="all">Все</button>
+                            <button type="button" class="btn btn-outline-light" data-filter="favorite">Избранные</button>
+                        </div>
+                        <select id="movieSelect" class="form-select" name="movieId" required>
                             <option value="">Выберите фильм</option>
                             @foreach (var movie in Model.AvailableMovies)
                             {
-                                <option value="@movie.Id">@movie.Title</option>
+                                <option value="@movie.Id" data-favorite="@movie.IsFavorite.ToString().ToLowerInvariant()">@movie.Title</option>
                             }
                         </select>
                     </div>
@@ -87,3 +92,18 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+<script>
+(() => {
+ const movieSearchInput=document.getElementById("movieSearchInput");
+ const movieSelect=document.getElementById("movieSelect");
+ if(!movieSearchInput||!movieSelect) return;
+ const filterBtns=document.querySelectorAll("[data-filter]");
+ let activeFilter="all";
+ const filterOptions=()=>{const q=movieSearchInput.value.toLowerCase().trim(); [...movieSelect.options].forEach((opt,i)=>{if(i===0){opt.hidden=false;return;} const fav=opt.dataset.favorite==="true"; const byFilter=activeFilter==="all"||fav; const bySearch=opt.text.toLowerCase().includes(q); opt.hidden=!(byFilter&&bySearch);});};
+ filterBtns.forEach(btn=>btn.addEventListener("click",()=>{activeFilter=btn.dataset.filter; filterBtns.forEach(b=>b.classList.toggle("active", b===btn)); filterOptions();}));
+ movieSearchInput.addEventListener("input",filterOptions);
+})();
+</script>
+}
