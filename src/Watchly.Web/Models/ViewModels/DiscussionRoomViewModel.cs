@@ -8,6 +8,10 @@ namespace Watchly.Web.Models.ViewModels
         public string? MoviePosterUrl { get; set; }
         public string FriendName { get; set; } = string.Empty;
         public string? FriendAvatarUrl { get; set; }
+        public bool IsActive { get; set; }
+        public bool IsPending { get; set; }
+        public bool IsClosed { get; set; }
+        public bool IsInitiator { get; set; }
         public List<DiscussionRoomMessageViewModel> Messages { get; set; } = new();
     }
 

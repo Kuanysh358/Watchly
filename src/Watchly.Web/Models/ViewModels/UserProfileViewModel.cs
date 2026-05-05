@@ -23,6 +23,9 @@ namespace Watchly.Web.Models.ViewModels
 
         public IEnumerable<MovieOptionViewModel> AvailableMovies { get; set; } = new List<MovieOptionViewModel>();
 
+        public IEnumerable<DiscussionRoomHistoryItemViewModel> DiscussionRoomHistory { get; set; } = new List<DiscussionRoomHistoryItemViewModel>();
+        public IEnumerable<DirectChatHistoryItemViewModel> DirectChatHistory { get; set; } = new List<DirectChatHistoryItemViewModel>();
+
         public ProfileEditViewModel? EditProfile { get; set; }
     }
 
@@ -40,6 +43,26 @@ namespace Watchly.Web.Models.ViewModels
         public string Title { get; set; } = string.Empty;
         public string? PosterUrl { get; set; }
         public int Score { get; set; }
+    }
+
+    public class DiscussionRoomHistoryItemViewModel
+    {
+        public int RoomId { get; set; }
+        public int MovieId { get; set; }
+        public string MovieTitle { get; set; } = string.Empty;
+        public string FriendName { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public int MessagesCount { get; set; }
+        public bool IsClosed { get; set; }
+    }
+
+    public class DirectChatHistoryItemViewModel
+    {
+        public string FriendId { get; set; } = string.Empty;
+        public string FriendName { get; set; } = string.Empty;
+        public DateTime LastMessageAt { get; set; }
+        public int MessagesCount { get; set; }
+        public string? LastText { get; set; }
     }
 
     public class MovieOptionViewModel

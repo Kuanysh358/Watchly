@@ -184,6 +184,51 @@
         </div>
 
         <div class="profile-section">
+            <h4><i class="fas fa-comments"></i> Достармен чат тарихы</h4>
+            @if (Model.DirectChatHistory.Any())
+            {
+                <div class="history-list">
+                @foreach (var chat in Model.DirectChatHistory)
+                {
+                    <div class="history-item">
+                        <div class="history-info">
+                            <a asp-controller="Profile" asp-action="Chat" asp-route-id="@chat.FriendId" class="history-title">@chat.FriendName</a>
+                            <span class="text-muted small">@chat.LastMessageAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm") · Хабарлама: @chat.MessagesCount</span>
+                            <div class="text-muted small">Соңғы: @chat.LastText</div>
+                        </div>
+                    </div>
+                }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">Чаттар әлі жоқ.</p>
+            }
+        </div>
+
+        <div class="profile-section">
+            <h4><i class="fas fa-users"></i> Бөлмелер тарихы</h4>
+            @if (Model.DiscussionRoomHistory.Any())
+            {
+                <div class="history-list">
+                @foreach (var room in Model.DiscussionRoomHistory)
+                {
+                    <div class="history-item">
+                        <div class="history-info">
+                            <a asp-controller="DiscussionRoom" asp-action="Room" asp-route-id="@room.RoomId" class="history-title">@room.MovieTitle</a>
+                            <span class="text-muted small">@room.FriendName · @room.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm") · Хабарлама: @room.MessagesCount</span>
+                        </div>
+                    </div>
+                }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">Бөлмелер тарихы бос.</p>
+            }
+        </div>
+
+        <div class="profile-section">
             <h4><i class="fas fa-star"></i> Мои оценки</h4>
             @if (Model.Ratings.Any())
             {

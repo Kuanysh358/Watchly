@@ -854,3 +854,5 @@ footer .text-muted { color: #9ca3af !important; font-weight: 500; }
     .detail-main .detail-title { font-size: 1.9rem; }
     .detail-backdrop { height: 420px; }
 }
+
+body{background:#111827;color:#e5e7eb;} .navbar,.form-card,.profile-section,.detail-panel,.chat-shell{background:#1f2937 !important;color:#e5e7eb;} a{color:#93c5fd;} .text-muted{color:#9ca3af !important;}
