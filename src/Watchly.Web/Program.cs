@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Localization;
 using System.Globalization;
 using Watchly.Web.Data;
+using Watchly.Web.Hubs;
 using Watchly.Web.Models.DataModels;
 using Watchly.Web.Models.ViewModels;
 using Watchly.Web.Repositories;
@@ -38,8 +39,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 // MVC
-builder.Services.AddLocalization();
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddControllersWithViews();
+builder.Services.AddSignalR();
 
 // Repositories
 builder.Services.AddScoped<IMovieRepository, MovieRepository>();
@@ -80,6 +82,8 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.MapHub<DiscussionRoomHub>("/hubs/discussionRoom");
 
 // Auto migrate and seed
 using (var scope = app.Services.CreateScope())
