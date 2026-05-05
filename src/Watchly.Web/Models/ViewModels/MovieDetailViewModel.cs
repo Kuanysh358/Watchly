@@ -8,6 +8,7 @@ namespace Watchly.Web.Models.ViewModels
         public int ReleaseYear { get; set; }
         public decimal Rating { get; set; }
         public string? PosterUrl { get; set; }
+        public string? BackdropUrl { get; set; }
         public string? TrailerUrl { get; set; }
         public string? VideoUrl { get; set; }
         public int? TmdbId { get; set; }

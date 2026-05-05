@@ -2,7 +2,7 @@
 @{ ViewData["Title"] = Model.Title; }
 
 @{
-    var hasMoviePlayer = !string.IsNullOrWhiteSpace(Model.VideoUrl);
+    var hasMoviePlayer = !string.IsNullOrWhiteSpace(Model.VideoUrl) || Model.TmdbId.HasValue;
     var hasTrailer = !string.IsNullOrWhiteSpace(Model.TrailerUrl);
     var initialMode = hasMoviePlayer ? "movie" : (hasTrailer ? "trailer" : "none");
 }
@@ -51,11 +51,11 @@
             </div>
         </header>
 
-        <section id="playerSection" class="player-section mb-4" data-initial-mode="@initialMode" data-movie-url="@Model.VideoUrl" data-fallback-url="@(Model.TmdbId.HasValue ? $"https://vidsrc.me/embed/movie?tmdb={Model.TmdbId.Value}" : "")" data-trailer-url="@Model.TrailerUrl">
+        <section id="playerSection" class="player-section mb-4" data-initial-mode="@initialMode" data-movie-url="@Model.VideoUrl" data-fallback-url="@(Model.TmdbId.HasValue ? $"https://vidsrc.to/embed/movie/{Model.TmdbId.Value}" : "")" data-trailer-url="@Model.TrailerUrl">
             <h3 class="section-title"><i class="fas fa-play-circle"></i> Плеер</h3>
             <div id="moviePlayerBlock" class="video-player-wrap @(initialMode == "movie" ? string.Empty : "d-none")">
                 <div class="trailer-player-wrap">
-                    <iframe id="moviePlayerFrame" class="trailer-player" src="@(initialMode == "movie" ? Model.VideoUrl : "")" allowfullscreen allow="autoplay; fullscreen" sandbox="allow-forms allow-scripts allow-same-origin" referrerpolicy="origin"></iframe>
+                    <iframe id="moviePlayerFrame" class="trailer-player" src="@(initialMode == "movie" ? Model.VideoUrl : "")" allowfullscreen allow="autoplay; fullscreen" sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation" referrerpolicy="origin"></iframe>
                 </div>
             </div>
             <div id="trailerPlayerBlock" class="video-player-wrap @(initialMode == "trailer" ? string.Empty : "d-none")">
@@ -175,7 +175,9 @@
     const switchMode = (mode) => {
         if (movieBlock) movieBlock.classList.toggle('d-none', mode !== 'movie');
         if (trailerBlock) trailerBlock.classList.toggle('d-none', mode !== 'trailer');
-        if (mode === 'movie' && movieFrame && !movieFrame.src && primaryMovieUrl) movieFrame.src = primaryMovieUrl;
+        if (mode === 'movie' && movieFrame && !movieFrame.src) {
+            movieFrame.src = primaryMovieUrl || fallbackMovieUrl;
+        }
         if (mode === 'trailer' && trailerFrame && trailerUrl) trailerFrame.src = trailerUrl;
     };
 
