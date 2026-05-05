@@ -16,6 +16,8 @@ namespace Watchly.Web.Models.DataModels
         [MaxLength(500)]
         public string? ImageUrl { get; set; }
 
+        public bool IsSystemMessage { get; set; } = false;
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DiscussionRoom Room { get; set; } = null!;
