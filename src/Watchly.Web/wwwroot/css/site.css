@@ -54,6 +54,12 @@ a:hover { color: var(--accent); }
 }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--accent-hover); color: #fff; transform: translateY(-1px); }
+.btn-primary:focus, .btn-primary:active, .btn-primary:focus-visible,
+.btn-secondary:focus, .btn-secondary:active, .btn-secondary:focus-visible,
+.btn-danger:focus, .btn-danger:active, .btn-danger:focus-visible {
+    box-shadow: 0 0 0 3px rgba(139,92,246,0.28) !important;
+    outline: none;
+}
 .btn-secondary { background: var(--bg-surface); color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover { background: var(--border); color: var(--text); }
 .btn-secondary.active { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -62,6 +68,21 @@ a:hover { color: var(--accent); }
 .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
 .btn-lg { padding: 0.8rem 2rem; font-size: 1rem; }
 .w-100 { width: 100%; justify-content: center; }
+
+.lang-btn {
+    border: 1px solid var(--accent);
+    color: var(--accent-light);
+    background: transparent;
+}
+
+.lang-btn:hover,
+.lang-btn:focus,
+.lang-btn:active,
+.lang-btn.active {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #fff !important;
+}
 
 /* ===================== LAYOUT ===================== */
 main { flex: 1; padding: 2rem 0; }

@@ -1,5 +1,10 @@
+@using System.Globalization
+@{
+    var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var isKz = culture == "kk" || culture == "kz";
+}
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="@(isKz ? "kk" : "ru")">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -120,7 +125,7 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="@Url.Action("Index", "Cinema")">
-                            <i class="fas fa-th"></i> Каталог
+                            <i class="fas fa-th"></i> @(isKz ? "Каталог" : "Каталог")
                         </a>
                     </li>
                     
@@ -128,13 +133,13 @@
                     {
                         <li class="nav-item">
                             <a class="nav-link" href="@Url.Action("Watchlist", "Cinema")">
-                                <i class="fas fa-heart"></i> Избранное
+                                <i class="fas fa-heart"></i> @(isKz ? "Таңдаулылар" : "Избранное")
                             </a>
                         </li>
                         
                         <li class="nav-item">
                             <a class="nav-link" href="@Url.Action("ViewHistory", "Cinema")">
-                                <i class="fas fa-history"></i> История
+                                <i class="fas fa-history"></i> @(isKz ? "Тарих" : "История")
                             </a>
                         </li>
                         
@@ -142,7 +147,7 @@
                         {
                             <li class="nav-item">
                                 <a class="nav-link" href="@Url.Action("Dashboard", "Admin")">
-                                    <i class="fas fa-cog"></i> Админ
+                                    <i class="fas fa-cog"></i> @(isKz ? "Әкімші" : "Админ")
                                 </a>
                             </li>
                         }
@@ -152,12 +157,12 @@
                                 <i class="fas fa-user"></i> @User.Identity?.Name
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end bg-dark" aria-labelledby="userMenu">
-                                <li><a class="dropdown-item text-light" href="@Url.Action("Index", "Profile")">Профиль</a></li>
+                                <li><a class="dropdown-item text-light" href="@Url.Action("Index", "Profile")">@(isKz ? "Профиль" : "Профиль")</a></li>
                                 <li><hr class="dropdown-divider" /></li>
                                 <li>
                                     <form method="post" action="@Url.Action("Logout", "Account")">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="dropdown-item text-danger">Выход</button>
+                                        <button type="submit" class="dropdown-item text-danger">@(isKz ? "Шығу" : "Выход")</button>
                                     </form>
                                 </li>
                             </ul>
@@ -167,13 +172,13 @@
                     {
                         <li class="nav-item">
                             <a class="nav-link" href="@Url.Action("Login", "Account")">
-                                <i class="fas fa-sign-in-alt"></i> Вход
+                                <i class="fas fa-sign-in-alt"></i> @(isKz ? "Кіру" : "Вход")
                             </a>
                         </li>
                         
                         <li class="nav-item">
                             <a class="nav-link" href="@Url.Action("Register", "Account")">
-                                <i class="fas fa-user-plus"></i> Регистрация
+                                <i class="fas fa-user-plus"></i> @(isKz ? "Тіркелу" : "Регистрация")
                             </a>
                         </li>
                     }
@@ -181,8 +186,8 @@
                         <form method="post" action="@Url.Action("SetLanguage", "Home")" class="d-flex gap-1">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-                            <button class="btn btn-sm btn-outline-light" name="lang" value="ru" type="submit">RU</button>
-                            <button class="btn btn-sm btn-outline-light" name="lang" value="kz" type="submit">KZ</button>
+                            <button class="btn btn-sm lang-btn @(isKz ? string.Empty : "active")" name="lang" value="ru" type="submit">RU</button>
+                            <button class="btn btn-sm lang-btn @(isKz ? "active" : string.Empty)" name="lang" value="kz" type="submit">KZ</button>
                         </form>
                     </li>
                 </ul>
@@ -221,21 +226,21 @@
                     <h5 class="gradient-text mb-3">
                         <i class="fas fa-film"></i> Watchly
                     </h5>
-                    <p class="text-muted" style="font-weight: 500;">Откройте мир кинематографии с нашим приложением. Ищите, смотрите и сохраняйте ваши любимые фильмы.</p>
+                    <p class="text-muted" style="font-weight: 500;">@(isKz ? "Қосымшамызбен кино әлемін ашыңыз. Іздеңіз, көріңіз және сүйікті фильмдеріңізді сақтаңыз." : "Откройте мир кинематографии с нашим приложением. Ищите, смотрите и сохраняйте ваши любимые фильмы.")</p>
                 </div>
                 
                 <div class="col-md-4 mb-4">
-                    <h5><i class="fas fa-link"></i> Быстрые ссылки</h5>
+                    <h5><i class="fas fa-link"></i> @(isKz ? "Жылдам сілтемелер" : "Быстрые ссылки")</h5>
                     <ul class="list-unstyled">
-                        <li><a href="@Url.Action("Index", "Home")"><i class="fas fa-chevron-right"></i> Главная</a></li>
-                        <li><a href="@Url.Action("Index", "Cinema")"><i class="fas fa-chevron-right"></i> Каталог фильмов</a></li>
-                        <li><a href="#"><i class="fas fa-chevron-right"></i> О проекте</a></li>
-                        <li><a href="#"><i class="fas fa-chevron-right"></i> Контакты</a></li>
+                        <li><a href="@Url.Action("Index", "Home")"><i class="fas fa-chevron-right"></i> @(isKz ? "Басты бет" : "Главная")</a></li>
+                        <li><a href="@Url.Action("Index", "Cinema")"><i class="fas fa-chevron-right"></i> @(isKz ? "Фильмдер каталогы" : "Каталог фильмов")</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i> @(isKz ? "Жоба туралы" : "О проекте")</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i> @(isKz ? "Байланыс" : "Контакты")</a></li>
                     </ul>
                 </div>
                 
                 <div class="col-md-4 mb-4">
-                    <h5><i class="fas fa-share-alt"></i> Социальные сети</h5>
+                    <h5><i class="fas fa-share-alt"></i> @(isKz ? "Әлеуметтік желілер" : "Социальные сети")</h5>
                     <div class="social-icons">
                         <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
                         <a href="#" title="Facebook"><i class="fab fa-facebook"></i></a>
@@ -249,7 +254,7 @@
             
             <div class="text-center">
                 <p class="text-muted mb-1">
-                    <i class="fas fa-copyright"></i> @DateTime.Now.Year <strong>Watchly</strong> — Ваш личный кинотеатр
+                    <i class="fas fa-copyright"></i> @DateTime.Now.Year <strong>Watchly</strong> — @(isKz ? "Сіздің жеке кинотеатрыңыз" : "Ваш личный кинотеатр")
                 </p>
 
             </div>
